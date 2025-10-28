@@ -1,0 +1,87 @@
+<h1 class="page-title">Suggestions de fusion</h1>
+
+<!-- Historique, replié par défaut -->
+<div class="fusion-section">
+  <details id="logs-panel">
+    <summary class="fusion-summary">Historique récent</summary>
+    <div class="fusion-card">
+      <%= turbo_frame_tag "logs" do %>
+        <%= render partial: "admin/merge_suggestions/logs",
+                   locals: {
+                     logs: @logs,
+                     targets_by_id: @targets_by_id,
+                     sources_by_id: defined?(@sources_by_id) ? @sources_by_id : {}
+                   } %>
+      <% end %>
+    </div>
+  </details>
+</div>
+
+<!-- Formulaire de filtres -->
+<div class="fusion-section">
+  <%= form_with url: admin_merge_suggestions_path, method: :get, local: true, class: "fusion-form" do %>
+    <div>
+      <label>Filtrer token :</label><br>
+      <%= text_field_tag :token, @token, placeholder: "ex: dentis, radiolog…" %>
+    </div>
+
+    <div>
+      <label>Longueur min token :</label><br>
+      <%= number_field_tag :min_len, @min_len, min: 3, max: 12, step: 1 %>
+    </div>
+
+    <div>
+      <label>Taille min groupe :</label><br>
+      <%= number_field_tag :min_group, @min_group, min: 2, max: 50, step: 1 %>
+    </div>
+
+    <div>
+      <label>Par page :</label><br>
+      <%= select_tag :per_page, options_for_select([100,200,500,1000,2000], @per_page) %>
+    </div>
+
+    <%= hidden_field_tag :page, 1 %>
+
+    <div>
+      <%= submit_tag "Appliquer", class: "btn" %>
+      <% if @token.present? || params[:min_len].present? || params[:min_group].present? || params[:per_page].present? %>
+        <%= link_to "Réinitialiser", admin_merge_suggestions_path, class: "fusion-reset" %>
+      <% end %>
+    </div>
+  <% end %>
+</div>
+
+<h2>Groupes proposés (<%= @total %>)</h2>
+
+<!-- Pagination -->
+<% if @total_pages > 1 %>
+  <div class="fusion-pagination">
+    <% prevp = @page - 1 %>
+    <% nextp = @page + 1 %>
+    <% common = { token: @token, min_len: @min_len, min_group: @min_group, per_page: @per_page } %>
+
+    <%= link_to("« Préc.", admin_merge_suggestions_path(common.merge(page: [1, prevp].max)), class: "fusion-page-link") if @page > 1 %>
+
+    <% 1.upto(@total_pages) do |n| %>
+      <% if n == @page %>
+        <strong class="fusion-current-page">[<%= n %>]</strong>
+      <% else %>
+        <%= link_to n, admin_merge_suggestions_path(common.merge(page: n)), class: "fusion-page-link" %>
+      <% end %>
+    <% end %>
+
+    <%= link_to("Suiv. »", admin_merge_suggestions_path(common.merge(page: [@total_pages, nextp].min)), class: "fusion-page-link") if @page < @total_pages %>
+  </div>
+<% end %>
+
+<!-- Groupes -->
+<% if @groups_page.blank? %>
+  <p>Aucun groupe ne correspond à ce filtre.</p>
+<% else %>
+  <% @groups_page.each do |g| %>
+    <%= turbo_frame_tag "group-#{g[:token]}" do %>
+      <%= render partial: "admin/merge_suggestions/group",
+                 locals: { g: g, for_token: nil, target_candidates: {} } %>
+    <% end %>
+  <% end %>
+<% end %>

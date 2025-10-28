@@ -1,0 +1,61 @@
+<h1><%= @profession.name %></h1>
+
+<nav style="margin-bottom:1rem;">
+  <strong>Voir :</strong>
+  <%= link_to "Approved", admin_profession_path(@profession, status: "approved") %> |
+  <%= link_to "Pending",  admin_profession_path(@profession, status: "pending") %> |
+  <%= link_to "Rejected", admin_profession_path(@profession, status: "rejected") %> |
+  <%= link_to "All",      admin_profession_path(@profession, status: "all") %> |
+  <%= link_to "← Retour au référentiel", admin_professions_path %>
+</nav>
+
+<%# Compteurs par statut (pour cette profession) %>
+<% counts = ProfessionMapping.where(profession_id: @profession.id).group(:status).count %>
+<p style="margin:.25rem 0 1rem;">
+  <strong>Compteurs</strong> —
+  Approved: <%= counts["approved"] || 0 %> ·
+  Pending: <%= counts["pending"] || 0 %> ·
+  Rejected: <%= counts["rejected"] || 0 %>
+</p>
+
+<% if @possible_duplicates.any? %>
+  <div style="border:1px solid #ccc; padding:8px; margin-bottom:12px;">
+    <strong>Doublons potentiels (même name_norm) :</strong>
+    <ul>
+      <% @possible_duplicates.each do |dup| %>
+        <li>
+          <%= dup.name %>
+          <%= form_with url: merge_into_admin_profession_path(@profession), method: :post, local: true, style: "display:inline;margin-left:8px;" do %>
+            <%= hidden_field_tag :target_id, dup.id %>
+            <%= submit_tag "Fusionner cette fiche dans « #{dup.name} »" %>
+          <% end %>
+        </li>
+      <% end %>
+    </ul>
+  </div>
+<% end %>
+
+<table border="1" cellpadding="6" cellspacing="0">
+  <thead>
+    <tr>
+      <th>Compagnie</th>
+      <th>Libellé compagnie</th>
+      <th>Status</th>
+      <th>Score</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    <% @mappings.each do |m| %>
+      <% cp = m.carrier_profession %>
+      <% carrier = cp.carrier_referential.carrier.name %>
+      <tr>
+        <td><%= carrier %></td>
+        <td><%= cp.external_label %></td>
+        <td><%= m.status %></td>
+        <td><%= m.confidence ? number_to_percentage(m.confidence * 100, precision: 0) : "-" %></td>
+        <td><%= link_to "Changer", edit_admin_profession_mapping_path(m) %></td>
+      </tr>
+    <% end %>
+  </tbody>
+</table>

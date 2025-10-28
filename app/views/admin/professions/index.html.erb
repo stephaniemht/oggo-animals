@@ -1,0 +1,111 @@
+<h1 class="cp-title">Référentiel OGGO</h1>
+
+<div class="card">
+  <%= form_with url: admin_professions_path,
+                method: :get,
+                local: true,
+                data: { turbo: false },
+                html: { id: "filters-form" } do %>
+
+    <div class="filters-row">
+      <label>Recherche</label>
+      <%= text_field_tag :q, @q, placeholder: "ex: radiologue…", class: "inp", autofocus: true %>
+
+      <label>Présence</label>
+      <%= select_tag :company_span,
+            options_for_select([["Présent dans 1 compagnie","one"],["Présent dans ≥2 compagnies","multi"]], @company_span),
+            include_blank: "— présence (optionnel) —",
+            class: "sel" %>
+
+      <label>Par page</label>
+      <%= select_tag :per_page,
+            options_for_select([50,100,200,500,1000], @per_page),
+            class: "sel",
+            onchange: 'this.form.submit();' %>
+
+      <%= hidden_field_tag :page, 1 %>
+
+      <%= submit_tag "Rechercher", class: "btn" %>
+
+      <% if @q.present? || @company_span.present? || params[:per_page].present? %>
+        <%= link_to "Réinitialiser", admin_professions_path, class: "btn secondary" %>
+      <% end %>
+    </div>
+
+    <div class="filters-row">
+      <%= link_to "⬇️ Export CSV Référentiel + Compagnies",
+                  admin_professions_matrix_path(format: :csv),
+                  class: "btn secondary",
+                  data: { turbo: false } %>
+
+      <%= link_to "⬇️ Export PHP (avec alias)",
+                  admin_professions_php_path(include_aliases: 1),
+                  class: "btn secondary",
+                  data: { turbo: false } %>
+
+      <%= link_to "⬇️ Export PHP Référentiel",
+                  admin_professions_php_path,
+                  class: "btn secondary",
+                  data: { turbo: false } %>
+    </div>
+  <% end %>
+</div>
+
+<div class="toolbar" style="margin: 8px 0;">
+  <span class="muted">
+    <strong><%= @total.to_i %></strong> résultat<%= 's' if @total.to_i != 1 %>
+  </span>
+
+  <% if @total_pages.to_i > 1 %>
+    <% total_pages_sane = [@total_pages.to_i, 1].max %>
+    <% prev_params = request.query_parameters.merge(page: (@page.to_i - 1).clamp(1, total_pages_sane), per_page: @per_page) %>
+    <% next_params = request.query_parameters.merge(page: (@page.to_i + 1).clamp(1, total_pages_sane), per_page: @per_page) %>
+
+    <div style="margin-left:auto; display:flex; align-items:center; gap:8px;">
+      <%= link_to "← Précédent", admin_professions_path(prev_params), class: "btn", disabled: (@page.to_i <= 1) %>
+      <span class="muted">Page <%= @page.to_i %> / <%= @total_pages.to_i %></span>
+      <%= link_to "Suivant →", admin_professions_path(next_params), class: "btn", disabled: (@page.to_i >= @total_pages.to_i) %>
+    </div>
+  <% end %>
+</div>
+
+<div class="table-wrap">
+  <div class="table-scroll">
+    <table class="cp-table">
+      <thead>
+        <tr>
+          <th>Métier OGGO</th>
+          <th class="w-120 ta-right">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if @professions.present? %>
+          <% @professions.each do |p| %>
+            <tr class="data-row">
+              <td><strong><%= p.name %></strong></td>
+              <td class="ta-right">
+                <%= link_to "Détails", admin_profession_path(p, status: "approved"), class: "btn-link" %>
+              </td>
+            </tr>
+          <% end %>
+        <% else %>
+          <tr>
+            <td colspan="2" class="muted ta-center">Aucun résultat.</td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<% if @total_pages.to_i > 1 %>
+  <% total_pages_sane = [@total_pages.to_i, 1].max %>
+  <% prev_params = request.query_parameters.merge(page: (@page.to_i - 1).clamp(1, total_pages_sane), per_page: @per_page) %>
+  <% next_params = request.query_parameters.merge(page: (@page.to_i + 1).clamp(1, total_pages_sane), per_page: @per_page) %>
+
+  <div class="toolbar" style="justify-content:flex-end;">
+    <%= link_to "← Précédent", admin_professions_path(prev_params), class: "btn", disabled: (@page.to_i <= 1) %>
+    <span class="muted">Page <%= @page.to_i %> / <%= @total_pages.to_i %></span>
+    <%= link_to "Suivant →", admin_professions_path(next_params), class: "btn", disabled: (@page.to_i >= @total_pages.to_i) %>
+  </div>
+<% end %>

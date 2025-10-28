@@ -1,0 +1,51 @@
+<h1>Profession Mappings</h1>
+
+<%= form_with url: admin_profession_mappings_path, method: :get, local: true, style: "margin-bottom:1rem;" do %>
+  <label>Status:</label>
+  <%= select_tag :status,
+        options_for_select([["Pending","pending"],["Approved","approved"],["Rejected","rejected"]], @status) %>
+
+  <label style="margin-left:1rem;">Compagnie:</label>
+  <%= select_tag :carrier_id,
+        options_from_collection_for_select(@carriers, :id, :name, params[:carrier_id]),
+        include_blank: "Toutes compagnies" %>
+
+  <%= submit_tag "Filtrer", style: "margin-left:1rem;" %>
+<% end %>
+
+<table border="1" cellpadding="6" cellspacing="0">
+  <thead>
+    <tr>
+      <th>Compagnie</th>
+      <th>Libellé compagnie</th>
+      <th>Proposition OGGO</th>
+      <th>Score</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    <% @mappings.each do |m| %>
+      <% cp = m.carrier_profession %>
+      <% carrier = cp.carrier_referential.carrier.name %>
+      <tr>
+        <td><%= carrier %></td>
+        <td><%= cp.external_label %></td>
+        <td><%= m.profession&.name || "-" %></td>
+        <td><%= m.confidence ? number_to_percentage(m.confidence * 100, precision: 0) : "-" %></td>
+        <td style="white-space:nowrap;">
+          <%= link_to "Changer", edit_admin_profession_mapping_path(m), style: "margin-right:8px;" %>
+
+          <%= form_with model: m, url: admin_profession_mapping_path(m), method: :patch, style: "display:inline;" do |f| %>
+            <%= hidden_field_tag "profession_mapping[status]", "approved" %>
+            <%= f.submit "Approuver" %>
+          <% end %>
+
+          <%= form_with model: m, url: admin_profession_mapping_path(m), method: :patch, style: "display:inline;margin-left:6px;" do |f| %>
+            <%= hidden_field_tag "profession_mapping[status]", "rejected" %>
+            <%= f.submit "Rejeter" %>
+          <% end %>
+        </td>
+      </tr>
+    <% end %>
+  </tbody>
+</table>

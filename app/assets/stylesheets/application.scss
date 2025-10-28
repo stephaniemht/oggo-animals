@@ -1,0 +1,173 @@
+@import "navbar";
+@import "ref_oggo";
+@import "merge_suggestions";
+/* === Page: CarrierProfessions#index — styles extraits de l'inline === */
+
+/* Palette (équivalent de :root {...}) */
+$primary:        #6d28d9;
+$primary-hover:  #5b21b6;
+$primary-soft:   #ede9fe;
+$header-bg:      #f3e8ff;
+$header-border:  #e9d5ff;
+$border:         #e5e7eb;
+$shadow:         0 1px 2px rgba(0,0,0,.04);
+$text:           #111827;
+$muted:          #6b7280;
+$row-alt:        #faf5ff;
+$row-hover:      #ede9fe;
+
+/* Utilitaires légers */
+.ta-right { text-align: right !important; }
+.w-48    { width: 48px !important; }
+.w-120   { width: 120px !important; }
+.w-220   { width: 220px !important; }
+.w-260   { width: 260px !important; }
+
+
+/* Titre de page */
+.cp-title {
+  margin: 0 0 12px;
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: .3px;
+  color: $text;
+}
+
+/* Carte / bloc */
+.card {
+  border: 1px solid $border;
+  border-radius: 12px;
+  padding: 12px;
+  background: #fff;
+  box-shadow: $shadow;
+}
+
+/* Filtres */
+.filters-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+
+  label { font-weight: 600; color: #374151; }
+}
+
+.inp, .sel {
+  padding: 8px 10px;
+  border: 1px solid $border;
+  border-radius: 8px;
+  outline: none;
+  background: #fff;
+  min-width: 220px;
+
+  &:focus {
+    border-color: $primary;
+    box-shadow: 0 0 0 3px rgba(109,40,217,.15);
+  }
+}
+
+/* Boutons */
+.btn {
+  padding: 8px 12px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: $primary;
+  color: #fff;
+  cursor: pointer;
+  transition: background .15s ease, transform .05s ease;
+
+  &:hover  { background: $primary-hover; }
+  &:active { transform: translateY(1px); }
+}
+
+.btn.secondary {
+  background: #f3f4f6;
+  color: $text;
+  border-color: $border;
+
+  &:hover { background: #e5e7eb; }
+}
+
+/* Tableau */
+.table-wrap {
+  margin-top: 12px;
+  border: 1px solid $border;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  background: #faf5ff;
+  border-bottom: 1px solid $header-border;
+}
+
+.muted { color: $muted; font-size: 13px; }
+.pill  {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 8px;
+  background: $primary-soft;
+  color: #4c1d95;
+  font-size: 12px;
+  border: 1px solid $header-border;
+}
+
+.table-scroll { max-height: 65vh; overflow: auto; }
+
+.cp-table { width: 100%; border-collapse: separate; border-spacing: 0; background: #fff; }
+
+.cp-table thead th {
+  position: sticky; top: 0; z-index: 1;
+  background: $header-bg;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: #4b5563;
+  border-bottom: 1px solid $header-border;
+  padding: 10px 12px;
+  text-align: left;
+}
+
+.cp-table tbody td {
+  padding: 12px;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.cp-table tbody tr.data-row:nth-child(even) { background: $row-alt; }
+.cp-table tbody tr.data-row:hover {
+  background: $row-hover;
+  transition: background .12s ease;
+}
+
+/* Badges de statut */
+.badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid transparent;
+}
+.badge.unmapped { background:#fff7ed; color:#9a3412; border-color:#fed7aa; }
+.badge.approved { background:#ecfdf5; color:#065f46; border-color:#a7f3d0; }
+.badge.pending  { background:#eff6ff; color:#1e40af; border-color:#bfdbfe; }
+.badge.rejected { background:#fef2f2; color:#991b1b; border-color:#fecaca; }
+
+/* Lien-bouton “Changer” */
+a.btn-link {
+  display: inline-block;
+  padding: 8px 10px;
+  border: 1px solid $header-border;
+  border-radius: 8px;
+  background: #faf5ff;
+  color: #4c1d95;
+  text-decoration: none;
+
+  &:hover { background: #f3e8ff; }
+}

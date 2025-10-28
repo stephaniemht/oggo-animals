@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title><%= content_for(:title) || "Oggo Professions" %></title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <%= csrf_meta_tags %>
+    <%= csp_meta_tag %>
+
+    <%= yield :head %>
+
+    <link rel="manifest" href="/manifest.json">
+    <link rel="icon" href="/icon.png" type="image/png">
+    <link rel="icon" href="/icon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="/icon.png">
+    <%= stylesheet_link_tag "application", "data-turbo-track": "reload" %>
+    <%= javascript_importmap_tags %>
+  </head>
+
+  <body class="app-body">
+    <turbo-frame id="flash"></turbo-frame>
+
+    <nav class="topnav">
+      <div class="brand">OGGO Admin</div>
+      <div class="spacer"></div>
+
+      <%= link_to "Métiers compagnies", admin_carrier_professions_path,
+            class: "nav-link #{'active' if current_page?(admin_carrier_professions_path)}" %>
+
+      <%= link_to "Référentiel OGGO", admin_professions_path,
+            class: "nav-link #{'active' if current_page?(admin_professions_path)}" %>
+
+      <%= link_to "Suggestions de fusion", admin_merge_suggestions_path,
+            class: "nav-link #{'active' if current_page?(admin_merge_suggestions_path)}" %>
+
+      <%= link_to "Historique", logs_admin_merge_suggestions_path,
+      class: "nav-link #{'active' if current_page?(logs_admin_merge_suggestions_path)}" %>
+    </nav>
+
+    <% flash.each do |type, msg| %>
+      <div class="flash <%= type %>"><%= msg %></div>
+    <% end %>
+
+    <%= yield %>
+  </body>
+</html>

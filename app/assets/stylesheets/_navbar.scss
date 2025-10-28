@@ -1,0 +1,81 @@
+/* ==== Navbar / Layout global ==== */
+
+$app-text: #111827;
+
+.app-body {
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans,
+               "Helvetica Neue", Arial, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", sans-serif;
+  color: $app-text;
+}
+
+/* Palette partagée avec tes pages */
+$primary:       #6d28d9;
+$primary-hover: #5b21b6;
+$header-bg:     #f3e8ff;
+$header-border: #e9d5ff;
+$text:          #111827;
+
+/* Barre de navigation */
+.topnav {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: linear-gradient(180deg, #faf5ff, #f8f5ff);
+  border: 1px solid $header-border;
+  border-radius: 12px;
+  padding: 10px;
+  box-shadow: 0 1px 2px rgba(0,0,0,.04);
+  margin-bottom: 12px;
+}
+
+.topnav .brand {
+  font-weight: 800;
+  letter-spacing: .3px;
+  color: #4c1d95;
+  background: #ede9fe;
+  border: 1px solid $header-border;
+  padding: 6px 10px;
+  border-radius: 10px;
+}
+
+.topnav .spacer { flex: 1; }
+
+.nav-link {
+  display: inline-block;
+  padding: 8px 12px;
+  border: 1px solid #eceafc;
+  border-radius: 10px;
+  text-decoration: none;
+  color: $text;
+  background: #fff;
+  transition: background .15s ease, border-color .15s ease, transform .05s ease;
+
+  &:hover {
+    background: $header-bg;
+    border-color: $header-border;
+  }
+
+  &.active {
+    background: #ede9fe;
+    border-color: $primary;
+    color: #4c1d95;
+    box-shadow: inset 0 0 0 1px rgba(109,40,217,.15);
+  }
+}
+
+/* Mobile: la nav casse la ligne proprement */
+@media (max-width: 760px) {
+  .topnav { flex-wrap: wrap; gap: 8px; }
+  .topnav .spacer { display: none; }
+}
+
+/* Flash messages */
+.flash {
+  margin: 8px 0;
+  padding: 10px 12px;
+  border: 1px solid #81c784;
+  background: #e8f5e9;
+  border-radius: 10px;
+  &.alert, &.error { background: #fdecea; border-color: #f5c6cb; }
+  &.notice, &.success { background: #ecfdf5; border-color: #a7f3d0; }
+}

@@ -1,0 +1,133 @@
+<h1 class="cp-title">Métiers des compagnies</h1>
+
+<!-- ==== FORMULAIRE DE FILTRES (GET) ==== -->
+<div class="card">
+  <%= form_with url: admin_carrier_professions_path, method: :get, local: true,
+                html: { id: "filters-form" } do %>
+    <div class="filters-row">
+      <label>Recherche</label>
+      <%= text_field_tag :q, @q, placeholder: "ex: radiologue, coiffeur, avocat...", class: "inp" %>
+
+      <label>Compagnie</label>
+      <%= select_tag :carrier_id,
+            options_from_collection_for_select(@carriers, :id, :name, params[:carrier_id]),
+            include_blank: "Toutes compagnies",
+            class: "sel" %>
+
+      <label>Statut</label>
+      <% status_opts = [["All","all"],["Unmapped","unmapped"],["Approved","approved"],["Pending","pending"],["Rejected","rejected"]] %>
+      <%= select_tag :status, options_for_select(status_opts, @status), class: "sel" %>
+
+      <label style="display:inline-flex; align-items:center; gap:8px;">
+        <%= check_box_tag :only_once, "1", @only_once %>
+        Présent dans une seule compagnie
+      </label>
+
+      <%= submit_tag "Filtrer", class: "btn" %>
+      <% if params[:carrier_id].present? || @q.present? || @status != "all" || @only_once %>
+        <%= link_to "Réinitialiser", admin_carrier_professions_path, class: "btn secondary" %>
+      <% end %>
+    </div>
+  <% end %>
+</div>
+
+<!-- ==== FORMULAIRE DE SÉLECTION (POST) ==== -->
+<%= form_with url: bulk_select_admin_carrier_professions_path, method: :post, local: true,
+              html: { id: "bulk-form", "data-turbo": "false" } do %>
+
+  <div class="table-wrap">
+    <div class="toolbar">
+      <label class="muted" style="display:inline-flex; align-items:center; gap:8px;">
+        <input type="checkbox" id="check-all">
+        <span>Tout sélectionner (cette page)</span>
+      </label>
+
+      <!-- ⬇️ Menu d’actions -->
+      <%= select_tag :bulk_action,
+            options_for_select([
+              ["— Choisir une action —", ""],
+              ["Changer en masse (assigner à une profession)", "bulk_assign"], 
+              ["Passer le statut en 'approved'", "mark_approved"],
+              ["Passer le statut en 'rejected'", "mark_rejected"]
+            ]),
+            class: "sel",
+            required: true %>
+
+
+      <%= submit_tag "Appliquer", id: "bulk-submit", class: "btn secondary" %>
+
+      <span id="sel-count" class="muted" style="margin-left:8px;">0 sélection</span>
+
+      <% if @carrier_professions.respond_to?(:size) %>
+        <span style="margin-left:auto;" class="muted">
+          <span class="pill"><%= @carrier_professions.size %></span> lignes
+        </span>
+      <% end %>
+    </div>
+
+
+
+    <div class="table-scroll">
+      <table class="cp-table">
+        <thead>
+          <tr>
+            <th class="w-48"></th>
+            <th>Compagnie</th>
+            <th>Libellé compagnie</th>
+            <th>Proposition OGGO</th>
+            <th class="ta-right">Nb compagnies</th>
+            <th>Statut</th>
+            <th class="w-120">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @carrier_professions.each do |cp| %>
+            <% carrier = cp.carrier_referential.carrier.name %>
+            <% m = cp.profession_mappings.first %>
+            <% status = (m&.status || "unmapped").to_s %>
+            <% badge_class =
+                case status
+                when "approved" then "approved"
+                when "pending"  then "pending"
+                when "rejected" then "rejected"
+                else "unmapped"
+                end %>
+
+            <tr class="data-row">
+              <td>
+                <%= check_box_tag "ids[]", cp.id, false, class: "row-check" %>
+              </td>
+              <td><span class="pill"><%= carrier %></span></td>
+              <td><strong><%= cp.external_label %></strong></td>
+              <td>
+                <% if m&.profession %>
+                  <strong><%= m.profession.name %></strong>
+                <% else %>
+                  <span class="muted">(pas de mapping)</span>
+                <% end %>
+              </td>
+              <td class="ta-right">
+                <% if m&.profession_id %>
+                  <% nb = @carriers_count_by_prof[m.profession_id].to_i %>
+                  <span class="pill"><%= nb %></span>
+                <% else %>
+                  <span class="muted">-</span>
+                <% end %>
+              </td>
+              <td>
+                <span class="badge <%= badge_class %>"><%= status %></span>
+              </td>
+              <td>
+                <% if m %>
+                  <%= link_to "Changer", edit_admin_profession_mapping_path(m), class: "btn-link" %>
+                <% else %>
+                  <span class="muted">(aucune action)</span>
+                <% end %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+<% end %>

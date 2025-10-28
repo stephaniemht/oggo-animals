@@ -1,0 +1,114 @@
+.fusion-section {
+  margin-bottom: 1.5rem;
+}
+
+.fusion-summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.fusion-card {
+  margin-top: 0.5rem;
+  border: 1px solid #eee;
+  padding: 0.5rem;
+  border-radius: 8px;
+  background: #fafafa;
+}
+
+.fusion-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: flex-end;
+}
+
+.fusion-form label {
+  font-weight: 600;
+  margin-right: 0.5rem;
+}
+
+.fusion-form input[type="text"],
+.fusion-form input[type="number"],
+.fusion-form select {
+  padding: 6px 10px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  min-width: 140px;
+}
+
+.fusion-submit {
+  background-color: #6d28d9;
+  color: white;
+  font-weight: 600;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.fusion-reset {
+  margin-left: auto;
+  color: #6d28d9;
+  text-decoration: underline;
+  font-size: 0.9rem;
+}
+
+.fusion-pagination {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin: 1rem 0;
+}
+
+.fusion-page-link {
+  padding: 4px 8px;
+  border-radius: 4px;
+  background-color: #f1f1f1;
+  color: #333;
+  text-decoration: none;
+}
+
+.fusion-current-page {
+  font-weight: bold;
+  color: #6d28d9;
+}
+
+.group-card {
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+  background: #fff;
+}
+
+.group-header {
+  margin-bottom: 12px;
+}
+
+.group-members {
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px dashed #ddd;
+  border-radius: 6px;
+  padding: 8px;
+  background: #f9f9f9;
+}
+
+.form-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.form-check input[type="checkbox"],
+.form-check input[type="radio"] {
+  margin: 0;
+}
+
+.divider {
+  margin: 16px 0;
+  border: none;
+  border-top: 1px solid #eee;
+}

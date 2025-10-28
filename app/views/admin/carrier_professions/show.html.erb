@@ -1,0 +1,27 @@
+<h1>Détail métier compagnie</h1>
+
+<% cp = @carrier_profession %>
+<p>
+  <strong>Compagnie :</strong> <%= cp.carrier_referential.carrier.name %><br>
+  <strong>Libellé :</strong> <%= cp.external_label %>
+</p>
+
+<% if @mapping %>
+  <h3>Proposition / Mapping</h3>
+  <p>
+    <strong>OGGO :</strong> <%= @mapping.profession&.name || "-" %><br>
+    <strong>Status :</strong> <%= @mapping.status %><br>
+    <strong>Score :</strong> <%= @mapping.confidence ? number_to_percentage(@mapping.confidence * 100, precision: 0) : "-" %>
+  </p>
+  <p>
+    <%= link_to "Changer", edit_admin_profession_mapping_path(@mapping) %>
+  </p>
+<% else %>
+  <div style="border:1px solid #e99; padding:8px;">
+    Aucun mapping pour ce libellé.
+  </div>
+<% end %>
+
+<p style="margin-top:1rem;">
+  <%= link_to "← Retour à la liste", admin_carrier_professions_path %>
+</p>

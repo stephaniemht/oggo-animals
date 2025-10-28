@@ -1,0 +1,13 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  carrier_referential: one
+  external_code: MyString
+  external_label: MyString
+  external_label_norm: MyString
+
+two:
+  carrier_referential: two
+  external_code: MyString
+  external_label: MyString
+  external_label_norm: MyString

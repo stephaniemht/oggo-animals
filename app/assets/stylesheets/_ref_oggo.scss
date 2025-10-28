@@ -1,0 +1,124 @@
+/* ===== Référentiel OGGO — styles page admin/professions ===== */
+
+.cp-title {
+  font-size: 20px;
+  font-weight: 700;
+  margin: 0 0 12px;
+}
+
+/* Cartes / blocs */
+.card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 12px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+}
+
+/* Barre de filtres */
+#filters-form { margin: 0; }
+
+.filters-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 12px;
+}
+
+.inp, .sel {
+  min-width: 220px;
+  padding: 8px 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.inp:focus, .sel:focus {
+  outline: none;
+  border-color: #c7d2fe;
+  box-shadow: 0 0 0 3px rgba(99,102,241,0.15);
+}
+
+/* Boutons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #111827;
+  color: #fff;
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform .02s ease-in;
+}
+.btn:hover { transform: translateY(-1px); }
+
+.btn[disabled] { opacity: .5; cursor: not-allowed; }
+
+.btn.secondary {
+  background: #f9fafb;
+  color: #111827;
+}
+
+.btn-link {
+  color: #2563eb;
+  text-decoration: none;
+  font-weight: 600;
+}
+.btn-link:hover { text-decoration: underline; }
+
+/* Toolbar (compteurs + pagination) */
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Table */
+.table-wrap { border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden; }
+.table-scroll { overflow: auto; }
+
+.cp-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+}
+
+.cp-table thead th {
+  background: #f9fafb;
+  font-weight: 600;
+  text-align: left;
+  padding: 10px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.cp-table tbody td {
+  padding: 10px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.data-row:hover { background: #fcfcfd; }
+
+/* Utilitaires */
+.muted { color: #6b7280; }
+.ta-right { text-align: right; }
+.ta-center { text-align: center; }
+.w-120 { width: 120px; }
+.pill {
+  display: inline-block;
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  color: #374151;
+}
+
+/* Responsive simple */
+@media (max-width: 800px) {
+  .filters-row { gap: 8px; }
+  .inp, .sel { min-width: 160px; }
+  .w-120 { width: auto; }
+}

@@ -1,0 +1,13 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  profession: one
+  carrier_profession: one
+  status: MyString
+  confidence: 1.5
+
+two:
+  profession: two
+  carrier_profession: two
+  status: MyString
+  confidence: 1.5

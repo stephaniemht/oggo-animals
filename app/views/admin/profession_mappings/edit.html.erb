@@ -1,0 +1,95 @@
+<h1 class="cp-title">Réattribuer le mapping</h1>
+
+<% cp = @mapping.carrier_profession %>
+
+<!-- ===== RÉSUMÉ DU MAPPING ACTUEL ===== -->
+<div class="card" style="margin-bottom:12px;">
+  <div style="display:flex; flex-wrap:wrap; gap:12px; align-items:flex-start;">
+    <div>
+      <div class="muted" style="text-transform:uppercase; font-weight:700; letter-spacing:.04em; margin-bottom:6px;">Compagnie</div>
+      <div class="pill"><%= cp.carrier_referential.carrier.name %></div>
+    </div>
+
+    <div>
+      <div class="muted" style="text-transform:uppercase; font-weight:700; letter-spacing:.04em; margin-bottom:6px;">Libellé compagnie</div>
+      <div style="font-weight:700; color:#111827;"><%= cp.external_label %></div>
+    </div>
+
+    <div>
+      <div class="muted" style="text-transform:uppercase; font-weight:700; letter-spacing:.04em; margin-bottom:6px;">
+        Proposition actuelle
+      </div>
+      <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+        <span class="pill"><%= @mapping.profession&.name || "-" %></span>
+        <span class="muted">statut :</span>
+        <span class="pill"><%= @mapping.status %></span>
+        <span class="muted">présent dans :</span>
+        <span class="pill"><%= @current_carriers_count %></span>
+        <span class="muted">compagnie(s)</span>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== RECHERCHE (GET) ===== -->
+<div class="card" style="margin-bottom:12px;">
+  <%= form_with url: edit_admin_profession_mapping_path(@mapping), method: :get, local: true, html: { style: "margin:0;" } do %>
+    <div class="filters-row">
+      <label>Chercher une profession OGGO</label>
+      <%= text_field_tag :q, @q, placeholder: "ex: coiffeur, avocat, boulanger...", class: "inp" %>
+      <%= submit_tag "Rechercher", class: "btn" %>
+      <% if @q.present? %>
+        <span class="muted">Résultats pour « <strong><%= @q %></strong> »</span>
+      <% end %>
+    </div>
+  <% end %>
+</div>
+
+<!-- ===== RÉSULTATS ===== -->
+<% if @q.present? %>
+  <% if @candidates.any? %>
+    <div class="table-wrap">
+      <div class="table-scroll">
+        <table class="cp-table">
+          <thead>
+            <tr>
+              <th>Profession OGGO</th>
+              <th class="w-120">Nb compagnies</th>
+              <th class="w-220">Assigner</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @candidates.each do |p| %>
+              <tr class="data-row">
+                <td><strong><%= p.name %></strong></td>
+                <td>
+                  <span class="pill"><%= p.try(:carriers_count).to_i %></span>
+                </td>
+                <td>
+                  <%= form_with url: assign_admin_profession_mapping_path(@mapping),
+                                method: :post,
+                                local: true,
+                                data: { turbo: false },
+                                html: { style: "margin:0;" } do %>
+                    <%= hidden_field_tag :profession_id, p.id %>
+                    <%= submit_tag "Assigner", class: "btn secondary" %>
+                  <% end %>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  <% else %>
+    <div class="card">
+      <p class="muted" style="margin:0;">Aucun résultat. Ajuste la recherche.</p>
+    </div>
+  <% end %>
+<% end %>
+
+
+<p style="margin-top:12px;">
+  <%= link_to "← Retour à la liste", admin_carrier_professions_path, class: "btn-link" %>
+</p>

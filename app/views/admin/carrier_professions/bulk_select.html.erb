@@ -1,0 +1,95 @@
+<h1 class="cp-title">Changer en masse</h1>
+
+<!-- ===== SÉLECTION RÉSUMÉ ===== -->
+<% if @selected.present? %>
+  <div class="card" style="margin-bottom:12px;">
+    <p style="margin:0 0 8px;">
+      <strong style="font-size:16px;"><%= @selected.size %></strong> éléments sélectionnés :
+    </p>
+    <ul style="margin:0; padding-left:18px; max-height:180px; overflow:auto;">
+      <% @selected.first(10).each do |cp| %>
+        <li style="margin:4px 0;">
+          <span class="pill"><%= cp.carrier_referential.carrier.name %></span>
+          <span style="margin-left:8px; font-weight:600; color:#111827;"><%= cp.external_label %></span>
+        </li>
+      <% end %>
+    </ul>
+    <% if @selected.size > 10 %>
+      <p class="muted" style="margin:6px 0 0;">… et <%= @selected.size - 10 %> autres.</p>
+    <% end %>
+  </div>
+<% else %>
+  <div class="card">⚠️ Aucun élément sélectionné.</div>
+<% end %>
+
+
+<!-- ===== RECHERCHE DE CIBLE OGGO (GET) ===== -->
+<div class="card" style="margin-bottom:12px;">
+  <%= form_with url: bulk_select_admin_carrier_professions_path,
+                method: :get,
+                local: true,
+                data: { turbo: false },
+                html: { style: "margin:0;" } do %>
+    <% @ids.each { |id| concat hidden_field_tag("ids[]", id) } %>
+
+    <div class="filters-row">
+      <label>Rechercher une profession OGGO</label>
+      <%= text_field_tag :q, @q, placeholder: "ex: dentiste, radiologue…", class: "inp" %>
+      <%= submit_tag "Rechercher", class: "btn" %>
+      <% if @q.present? %>
+        <span class="muted">Résultats pour « <strong><%= @q %></strong> »</span>
+      <% end %>
+    </div>
+  <% end %>
+</div>
+
+<!-- ===== RÉSULTATS ===== -->
+<% if @q.present? %>
+  <% if @candidates.any? %>
+    <div class="table-wrap">
+      <div class="table-scroll">
+        <table class="cp-table">
+          <thead>
+            <tr>
+              <th>Profession OGGO</th>
+              <th class="w-120">Nb compagnies</th> <!-- ⬅️ nouvelle colonne -->
+              <th class="w-260">Assigner</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @candidates.each do |p| %>
+              <tr class="data-row">
+                <td>
+                  <strong><%= p.name %></strong>
+                </td>
+                <td>
+                  <span class="pill"><%= p.try(:carriers_count).to_i %></span> <!-- ⬅️ affichage -->
+                </td>
+                <td>
+                  <%= form_with url: bulk_assign_admin_carrier_professions_path,
+                                method: :post,
+                                local: true,
+                                data: { turbo: false },
+                                html: { style: "margin:0;" } do %>
+                    <% @ids.each { |id| concat hidden_field_tag("ids[]", id) } %>
+                    <%= hidden_field_tag :profession_id, p.id %>
+                    <%= submit_tag "Assigner à « #{p.name} » (#{@selected.size})", class: "btn secondary" %>
+                  <% end %>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  <% else %>
+    <div class="card">
+      <p class="muted" style="margin:0;">Aucun résultat. Ajuste la recherche.</p>
+    </div>
+  <% end %>
+<% end %>
+
+
+<p style="margin-top:12px;">
+  <%= link_to "← Retour à la liste", admin_carrier_professions_path, class: "btn-link" %>
+</p>

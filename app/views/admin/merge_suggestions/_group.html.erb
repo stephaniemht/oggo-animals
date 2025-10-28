@@ -1,0 +1,85 @@
+<div class="group-card">
+  <div class="group-header">
+    <p class="muted" style="margin-bottom: 4px;">
+      <strong>Token :</strong> <code><%= g[:token] %></code>
+      · <strong>Taille :</strong> <%= g[:size] %>
+    </p>
+    <p>
+      <strong>Cible suggérée :</strong> <%= g[:target].name %>
+    </p>
+  </div>
+
+  <%= form_with url: merge_group_admin_merge_suggestions_path,
+                method: :post,
+                local: true,
+                data: { turbo: false },
+                format: :html do %>
+
+    <%= hidden_field_tag :back_anchor, "group-#{g[:token]}" %>
+    <%= hidden_field_tag :target_id, g[:target].id %>
+
+    <div class="group-members">
+      <% g[:members].each do |p| %>
+        <label class="form-check">
+          <%= check_box_tag "member_ids[]", p.id, (p.id != g[:target].id) %>
+          <span><%= p.name %></span>
+        </label>
+      <% end %>
+    </div>
+
+    <div style="margin-top:10px;">
+      <%= submit_tag "Fusionner la sélection → « #{g[:target].name} »", class: "btn" %>
+    </div>
+  <% end %>
+
+  <hr class="divider">
+
+  <details <%= 'open' if for_token == g[:token] %>>
+    <summary class="muted">Changer de cible…</summary>
+
+    <%= form_with url: admin_merge_suggestions_path,
+                  method: :get,
+                  data: { turbo_frame: "group-#{g[:token]}" },
+                  authenticity_token: false,
+                  style: "margin-top:10px;" do %>
+
+      <%= hidden_field_tag :token, params[:token] %>
+      <%= hidden_field_tag :min_len, params[:min_len] || 6 %>
+      <%= hidden_field_tag :min_group, params[:min_group] || 2 %>
+      <%= hidden_field_tag :for_token, g[:token] %>
+
+      <label>Rechercher une autre cible :</label>
+      <%= text_field_tag :target_q, (for_token == g[:token] ? params[:target_q] : nil),
+                          placeholder: "ex: dentiste", class: "inp" %>
+      <%= submit_tag "Chercher", class: "btn secondary", style: "margin-left: 8px;" %>
+    <% end %>
+
+    <% if target_candidates[g[:token]] %>
+      <div style="margin-top:10px;">
+        <%= form_with url: merge_group_admin_merge_suggestions_path,
+                      method: :post,
+                      local: true,
+                      data: { turbo: false },
+                      format: :html do %>
+
+          <%= hidden_field_tag :back_anchor, "group-#{g[:token]}" %>
+          <% g[:members].each do |p| %>
+            <%= hidden_field_tag "member_ids[]", p.id %>
+          <% end %>
+
+          <label>Choisir la cible :</label>
+          <div class="form-check-group">
+            <% target_candidates[g[:token]].each do |p| %>
+              <label class="form-check">
+                <%= radio_button_tag :target_id, p.id, (p.id == g[:target].id) %>
+                <span><%= p.name %> (<em>#<%= p.id %></em>)</span>
+              </label>
+            <% end %>
+          </div>
+
+          <%= submit_tag "Fusionner tout le groupe vers cette cible", class: "btn" %>
+        <% end %>
+      </div>
+    <% end %>
+  </details>
+</div>
