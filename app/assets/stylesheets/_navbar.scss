@@ -1,13 +1,4 @@
-/* ==== Navbar / Layout global (thème teal/navy glass) ==== */
-
-/* On réutilise les variables globales qu’on a posées dans les autres fichiers :
-   $bg-gradient-start, $bg-gradient-end,
-   $card-bg, $card-border, $card-shadow,
-   $primary, $primary-hover,
-   $text-main, $text-dim,
-   $radius-lg, $radius-md
-*/
-
+@import "variables";
 /* ---------- BODY GLOBAL ---------- */
 .app-body {
   font-family:
@@ -190,8 +181,6 @@
   }
 }
 
-/* ---------- FLASH MESSAGES (notices / alerts) ---------- */
-/* On les stylise comme des toasts sombres translucides posés sous la nav */
 
 .flash {
   margin: 8px 0 16px;

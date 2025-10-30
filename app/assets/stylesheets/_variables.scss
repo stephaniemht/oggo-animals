@@ -1,26 +1,59 @@
-/* === Variables globales thème teal/navy === */
+/* ===========================
+   Palette globale / thème
+   =========================== */
 
-$bg-gradient-start: #0f172a; // navy très sombre
-$bg-gradient-end:   #1e293b; // bleu nuit
+/* Couleurs principales du thème */
+$bg-gradient-start: #0a0f1a; // fond très sombre bleuté
+$bg-gradient-end:   #1e293b; // bleu nuit/gris ardoise
 
-$card-bg: rgba(15,23,42,0.6);
-$card-border: rgba(255,255,255,0.07);
-$card-shadow:
-  0 30px 80px rgba(0,0,0,.9),
-  0 0 120px rgba(16,185,129,.2),
-  0 0 240px rgba(30,64,175,.15);
+$accent-green: #10b981; // vert émeraude
+$accent-blue:  #1e40af; // bleu foncé / royal
 
-$primary:        #0f766e;  // vert profond (teal)
-$primary-hover:  #115e59;  // plus sombre
+/* Couleurs texte */
+$text-main: #f8fafc;   // texte principal clair sur fond sombre
+$text-dim:  #94a3b8;   // texte atténué gris/bleu
+$text-color: #f8fafc;  // alias pour compatibilité ancienne
+$muted:     #94a3b8;   // ancien usage "muted"
 
-$primary-soft-bg:     rgba(16,185,129,0.08);
-$primary-soft-border: rgba(16,185,129,0.4);
+/* Couleurs de surface (cards, panneaux) */
+$card-bg: rgba(15,23,42,0.6);         // panneau sombre translucide
+$card-border: rgba(255,255,255,0.08); // léger contour clair
+$card-shadow: 0 24px 60px rgba(0,0,0,.8),
+               0 0 120px rgba(16,185,129,.15),
+               0 0 240px rgba(30,64,175,.15);
 
-$accent-soft-bg:      rgba(30,64,175,0.15);
-$accent-soft-border:  rgba(30,64,175,0.5);
+/* Anciennes variables héritées des écrans métiers */
+$primary:        #6d28d9;
+$primary-hover:  #5b21b6;
+$primary-soft:   rgba(109,40,217,0.12);
 
-$text-main: #f8fafc; // texte clair
-$text-dim:  rgba(226,232,240,.6); // texte secondaire
+$header-bg:      rgba(15,23,42,0.4);
+$header-border:  rgba(255,255,255,0.08);
 
-$radius-lg: 16px;
+$border:         rgba(255,255,255,0.12);
+
+/* Alternate row / hover in tables */
+$row-alt:   rgba(255,255,255,0.02);
+$row-hover: rgba(255,255,255,0.05);
+
+/* ===========================
+   Rayons, arrondis, etc.
+   =========================== */
+$radius-sm: 6px;
 $radius-md: 10px;
+$radius-lg: 14px;
+
+/* Ombres génériques des boutons / chips */
+$button-shadow: 0 14px 32px rgba(0,0,0,.8);
+$button-shadow-hover:
+  0 18px 40px rgba(0,0,0,.9),
+  0 0 24px rgba(16,185,129,.4),
+  0 0 60px rgba(30,64,175,.4);
+
+/* ===========================
+   Compatibilité classes existantes
+   =========================== */
+
+/* Certaines pages utilisent encore ces classes utilitaires. */
+$text:    $text-main;
+$shadow:  0 1px 2px rgba(0,0,0,.4); // mini ombre fallback pour anciens blocs
