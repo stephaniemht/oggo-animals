@@ -57,7 +57,7 @@ group :test do
   gem "selenium-webdriver"
 end
 
-gem "roo", "~> 1.13"
+gem "roo", "~> 3.0"
 
 gem "activerecord-import", "~> 2.2"
 
