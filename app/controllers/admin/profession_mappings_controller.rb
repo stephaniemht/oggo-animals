@@ -13,8 +13,17 @@ class Admin::ProfessionMappingsController < ApplicationController
   end
 
   def edit
-    @mapping = ProfessionMapping.find(params[:id])
-    @q = params[:q].to_s
+    @mapping = ProfessionMapping
+                .includes(:profession, carrier_profession: { carrier_referential: :carrier })
+                .find(params[:id])
+
+    # 🐶/🐱 onglet courant : param > profession actuelle > session > dog
+    @species = params[:species].presence_in(%w[dog cat]) ||
+               @mapping.profession&.animal_species ||
+               session[:species] || "dog"
+    session[:species] = @species
+
+    @q = params[:q].to_s.strip
 
     # 👉 nb de compagnies (hors rejected) où la profession actuelle est présente
     @current_carriers_count =
@@ -29,12 +38,16 @@ class Admin::ProfessionMappingsController < ApplicationController
         0
       end
 
+    # 🔎 IMPORTANT : base limitée à l’espèce choisie
+    base = Profession.where(animal_species: @species)
+
+    @candidates = []
     if @q.present?
-      norm   = LabelNormalizer.call(@q)
+      norm   = defined?(LabelNormalizer) ? LabelNormalizer.call(@q) : @q.downcase
       quoted = ActiveRecord::Base.connection.quote(norm)
       like   = "%#{norm.gsub(/\s+/, '%')}%"
 
-      rel = Profession
+      rel = base
               .joins(profession_mappings: { carrier_profession: { carrier_referential: :carrier } })
               .where.not(profession_mappings: { status: "rejected" })
       rel = rel.left_joins(:profession_synonyms) if defined?(ProfessionSynonym)
@@ -44,7 +57,8 @@ class Admin::ProfessionMappingsController < ApplicationController
 
       if roots.any?
         like_patterns = roots.map { |r| "%#{r}%" }
-        name_like_sql  = like_patterns.map { "professions.name_norm LIKE ?" }.join(" OR ")
+        name_like_sql = like_patterns.map { "professions.name_norm LIKE ?" }.join(" OR ")
+
         if defined?(ProfessionSynonym)
           alias_like_sql = like_patterns.map { "profession_synonyms.alias_norm LIKE ?" }.join(" OR ")
           filter_sql     = "(#{name_like_sql}) OR (#{alias_like_sql})"
@@ -76,8 +90,6 @@ class Admin::ProfessionMappingsController < ApplicationController
           .order("carriers_count DESC, score DESC, professions.name ASC")
           .limit(200)
       end
-    else
-      @candidates = []
     end
   end
 
@@ -91,29 +103,42 @@ class Admin::ProfessionMappingsController < ApplicationController
   end
 
   def assign
-    mapping     = ProfessionMapping.find(params[:id])
+    mapping     = ProfessionMapping
+                    .includes(carrier_profession: { carrier_referential: :carrier })
+                    .find(params[:id])
     cp          = mapping.carrier_profession
     old_prof    = mapping.profession
     chosen_prof = Profession.find(params.require(:profession_id))
+
+    # 🐶/🐱 récupérer/garder l’onglet courant + garde-fou
+    species = params[:species].presence_in(%w[dog cat]) ||
+              mapping.profession&.animal_species ||
+              session[:species] || "dog"
+    session[:species] = species
+    q = params[:q].to_s.presence
+
+    # 🚧 sécurité : empêcher chien ↔ chat
+    if chosen_prof.animal_species.present? && chosen_prof.animal_species != species
+      redirect_to edit_admin_profession_mapping_path(mapping, species: species, q: q),
+                  alert: "Tu ne peux pas assigner un #{chosen_prof.animal_species} depuis l’onglet #{species}."
+      return
+    end
 
     cleaned_old = false
 
     ActiveRecord::Base.transaction do
       # 1) approuve et repointe
-      mapping.update!(profession_id: chosen_prof.id, status: "approved")
+      mapping.profession_id = chosen_prof.id
+      mapping.status        = "approved"
+      mapping.confidence  ||= 1.0
+      mapping.save!
 
       # 2) apprend l’alias, sans jamais planter si déjà existant
       if defined?(ProfessionSynonym)
         alias_label = cp&.external_label.to_s.strip
         if alias_label.present?
-          existing =
-            if defined?(LabelNormalizer)
-              alias_norm = LabelNormalizer.call(alias_label)
-              ProfessionSynonym.find_by(alias_norm: alias_norm)
-            else
-              ProfessionSynonym.find_by(alias: alias_label)
-            end
-
+          alias_norm = defined?(LabelNormalizer) ? LabelNormalizer.call(alias_label) : alias_label.downcase
+          existing   = ProfessionSynonym.find_by(alias_norm: alias_norm) || ProfessionSynonym.find_by(alias: alias_label)
           if existing.nil?
             begin
               ProfessionSynonym.create!(profession_id: chosen_prof.id, alias: alias_label)
@@ -141,17 +166,13 @@ class Admin::ProfessionMappingsController < ApplicationController
     msg = "OK : « #{cp.external_label} » → « #{chosen_prof.name} » (+ alias appris)"
     msg += " — ancienne fiche supprimée car plus utilisée" if cleaned_old
 
-    respond_to do |format|
-      format.turbo_stream { redirect_to admin_carrier_professions_path, notice: msg, status: :see_other }
-      format.html        { redirect_to admin_carrier_professions_path, notice: msg, status: :see_other }
-    end
+    # ➜ retour à la liste, sur le bon onglet
+    redirect_to admin_carrier_professions_path(species: species), notice: msg, status: :see_other
 
   rescue ActiveRecord::RecordInvalid => e
     alert_msg = "Impossible d’assigner : #{e.record.errors.full_messages.to_sentence}"
-    respond_to do |format|
-      format.turbo_stream { redirect_back fallback_location: admin_carrier_professions_path, alert: alert_msg, status: :see_other }
-      format.html        { redirect_back fallback_location: admin_carrier_professions_path, alert: alert_msg, status: :see_other }
-    end
+    redirect_back fallback_location: admin_carrier_professions_path(species: session[:species] || "dog"),
+                  alert: alert_msg, status: :see_other
   end
 
 

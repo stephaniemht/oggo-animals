@@ -1,5 +1,21 @@
 <h1 class="cp-title">Référentiel OGGO</h1>
 
+<!-- 🔹 ONGlets Chiens / Chats -->
+<div class="tabs" style="display:flex; gap:8px; margin: 8px 0 12px;">
+  <% base_params = request.query_parameters.except(:page).symbolize_keys %>
+  <% active = ->(sp){ (params[:species].presence || "") == sp ? "background:#ede9fe; font-weight:600;" : "" } %>
+
+  <%= link_to "🐶 Chiens",
+      admin_professions_path(base_params.merge(species: "dog", page: 1)),
+      class: "btn",
+      style: "padding:8px 12px; border-radius:12px; #{active.call('dog')}" %>
+
+  <%= link_to "🐱 Chats",
+      admin_professions_path(base_params.merge(species: "cat", page: 1)),
+      class: "btn",
+      style: "padding:8px 12px; border-radius:12px; #{active.call('cat')}" %>
+</div>
+
 <div class="card">
   <%= form_with url: admin_professions_path,
                 method: :get,
@@ -7,9 +23,11 @@
                 data: { turbo: false },
                 html: { id: "filters-form" } do %>
 
+    <%= hidden_field_tag :species, @species if @species.present? %>
+
     <div class="filters-row">
       <label>Recherche</label>
-      <%= text_field_tag :q, @q, placeholder: "ex: radiologue…", class: "inp", autofocus: true %>
+      <%= text_field_tag :q, @q, placeholder: "ex: berger, siamois…", class: "inp", autofocus: true %>
 
       <label>Présence</label>
       <%= select_tag :company_span,
@@ -27,12 +45,12 @@
 
       <%= submit_tag "Rechercher", class: "btn" %>
 
-      <% if @q.present? || @company_span.present? || params[:per_page].present? %>
+      <% if @q.present? || @company_span.present? || params[:per_page].present? || @species.present? %>
         <%= link_to "Réinitialiser", admin_professions_path, class: "btn secondary" %>
       <% end %>
     </div>
 
-    <div class="filters-row">
+    <div class="filters-row" style="margin-top:10px;">
       <%= link_to "⬇️ Export CSV Référentiel + Compagnies",
                   admin_professions_matrix_path(format: :csv),
                   class: "btn secondary",
@@ -74,7 +92,8 @@
     <table class="cp-table">
       <thead>
         <tr>
-          <th>Métier OGGO</th>
+          <th>Animal OGGO</th>
+          <th class="w-120 ta-center">Nb compagnies</th>
           <th class="w-120 ta-right">Action</th>
         </tr>
       </thead>
@@ -83,20 +102,25 @@
           <% @professions.each do |p| %>
             <tr class="data-row">
               <td><strong><%= p.name %></strong></td>
+              <td class="ta-center">
+                <span class="pill"><%= p.try(:carriers_count).to_i %></span>
+              </td>
               <td class="ta-right">
-                <%= link_to "Détails", admin_profession_path(p, status: "approved"), class: "btn-link" %>
+                <%= link_to "Détails", admin_profession_path(p, status: "approved"),
+                    class: "btn secondary", style: "padding:4px 10px; font-size:14px;" %>
               </td>
             </tr>
           <% end %>
         <% else %>
           <tr>
-            <td colspan="2" class="muted ta-center">Aucun résultat.</td>
+            <td colspan="3" class="muted ta-center">Aucun résultat.</td>
           </tr>
         <% end %>
       </tbody>
     </table>
   </div>
 </div>
+
 
 <% if @total_pages.to_i > 1 %>
   <% total_pages_sane = [@total_pages.to_i, 1].max %>

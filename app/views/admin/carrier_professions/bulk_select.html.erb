@@ -1,5 +1,23 @@
 <h1 class="cp-title">Changer en masse</h1>
 
+<!-- 🔹 ONGlets espèces -->
+<div style="display:flex; gap:8px; margin: 8px 0 12px;">
+  <% current_species = params[:species].presence_in(%w[dog cat]) || "dog" %>
+  <% base_params = request.query_parameters.symbolize_keys %>
+
+  <%= link_to "🐶 Chiens",
+      bulk_select_admin_carrier_professions_path(base_params.merge(species: "dog")),
+      class: "btn",
+      data: { turbo: false },
+      style: "padding:8px 12px; border-radius:12px; #{current_species=='dog' ? 'background:#ede9fe; font-weight:600;' : ''}" %>
+
+  <%= link_to "🐱 Chats",
+      bulk_select_admin_carrier_professions_path(base_params.merge(species: "cat")),
+      class: "btn",
+      data: { turbo: false },
+      style: "padding:8px 12px; border-radius:12px; #{current_species=='cat' ? 'background:#ede9fe; font-weight:600;' : ''}" %>
+</div>
+
 <!-- ===== SÉLECTION RÉSUMÉ ===== -->
 <% if @selected.present? %>
   <div class="card" style="margin-bottom:12px;">
@@ -22,7 +40,6 @@
   <div class="card">⚠️ Aucun élément sélectionné.</div>
 <% end %>
 
-
 <!-- ===== RECHERCHE DE CIBLE OGGO (GET) ===== -->
 <div class="card" style="margin-bottom:12px;">
   <%= form_with url: bulk_select_admin_carrier_professions_path,
@@ -32,12 +49,20 @@
                 html: { style: "margin:0;" } do %>
     <% @ids.each { |id| concat hidden_field_tag("ids[]", id) } %>
 
+
+    <%= hidden_field_tag :species, current_species %>
+
     <div class="filters-row">
-      <label>Rechercher une profession OGGO</label>
-      <%= text_field_tag :q, @q, placeholder: "ex: dentiste, radiologue…", class: "inp" %>
+      <label>Rechercher un animal OGGO</label>
+      <%= text_field_tag :q, @q, placeholder: "ex: berger, siamois…", class: "inp" %>
+
       <%= submit_tag "Rechercher", class: "btn" %>
-      <% if @q.present? %>
-        <span class="muted">Résultats pour « <strong><%= @q %></strong> »</span>
+
+      <% if @q.present? || @kind.present? %>
+        <%= link_to "Réinitialiser",
+                    bulk_select_admin_carrier_professions_path(ids: @ids, species: current_species),
+                    class: "btn secondary",
+                    data: { turbo: false } %>
       <% end %>
     </div>
   <% end %>
@@ -52,19 +77,15 @@
           <thead>
             <tr>
               <th>Profession OGGO</th>
-              <th class="w-120">Nb compagnies</th> <!-- ⬅️ nouvelle colonne -->
+              <th class="w-120">Nb compagnies</th>
               <th class="w-260">Assigner</th>
             </tr>
           </thead>
           <tbody>
             <% @candidates.each do |p| %>
               <tr class="data-row">
-                <td>
-                  <strong><%= p.name %></strong>
-                </td>
-                <td>
-                  <span class="pill"><%= p.try(:carriers_count).to_i %></span> <!-- ⬅️ affichage -->
-                </td>
+                <td><strong><%= p.name %></strong></td>
+                <td><span class="pill"><%= p.try(:carriers_count).to_i %></span></td>
                 <td>
                   <%= form_with url: bulk_assign_admin_carrier_professions_path,
                                 method: :post,
@@ -72,6 +93,8 @@
                                 data: { turbo: false },
                                 html: { style: "margin:0;" } do %>
                     <% @ids.each { |id| concat hidden_field_tag("ids[]", id) } %>
+                    <%= hidden_field_tag :species, current_species %>
+                    <%= hidden_field_tag :q, @q %>
                     <%= hidden_field_tag :profession_id, p.id %>
                     <%= submit_tag "Assigner à « #{p.name} » (#{@selected.size})", class: "btn secondary" %>
                   <% end %>
@@ -89,7 +112,8 @@
   <% end %>
 <% end %>
 
-
 <p style="margin-top:12px;">
-  <%= link_to "← Retour à la liste", admin_carrier_professions_path, class: "btn-link" %>
+  <%= link_to "← Retour à la liste",
+              admin_carrier_professions_path(species: current_species),
+              class: "btn-link" %>
 </p>

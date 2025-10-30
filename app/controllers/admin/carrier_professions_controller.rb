@@ -1,66 +1,58 @@
 class Admin::CarrierProfessionsController < ApplicationController
-  # Liste tous les métiers des compagnies (recherche + filtre compagnie + statut)
-
   def index
+    # redirection par défaut pour montrer aussi les pending
+    if params.permit!.to_h.slice("q","status","carrier_id","only_once","species").values.all?(&:blank?)
+      redirect_to admin_carrier_professions_path(status: "all") and return
+    end
+
     @q          = params[:q].to_s.strip
     @status     = params[:status].presence || "all"
     @carrier_id = params[:carrier_id].presence
-    @only_once  = ActiveModel::Type::Boolean.new.cast(params[:only_once])  # 🔹
+    @only_once  = ActiveModel::Type::Boolean.new.cast(params[:only_once])
+    @species    = params[:species].presence_in(%w[dog cat]) # "dog" / "cat" / nil
 
-    # Point de départ
     rel = CarrierProfession
             .includes(carrier_referential: :carrier)
             .left_joins(:profession_mappings)
 
-    # --- filtres existants ---
-    if @q.present?
-      rel = rel.where("carrier_professions.external_label ILIKE ?", "%#{@q}%")
-    end
+    # filtre texte
+    rel = rel.where("carrier_professions.external_label ILIKE ?", "%#{@q}%") if @q.present?
 
+    # filtre compagnie
     if @carrier_id
       rel = rel.where(
         carrier_referential_id: CarrierReferential.where(carrier_id: @carrier_id).select(:id)
       )
     end
 
-    # Par défaut ("all") : on masque les 'rejected' mais on garde les unmapped
-    if @status == "all"
-      rel = rel.where("profession_mappings.id IS NULL OR profession_mappings.status != ?", "rejected")
-    end
-
+    # filtre status (même logique qu'avant)
     case @status
+    when "all"
+      rel = rel.where("profession_mappings.id IS NULL OR profession_mappings.status != ?", "rejected")
     when "unmapped"
       rel = rel.where.not(
         id: ProfessionMapping.select(:carrier_profession_id).distinct
       )
     when "approved"
-      approved_ids = ProfessionMapping
-                      .where(status: "approved")
-                      .select(:carrier_profession_id)
-
-      rejected_ids = ProfessionMapping
-                      .where(status: "rejected")
-                      .select(:carrier_profession_id)
-
+      approved_ids = ProfessionMapping.where(status: "approved").select(:carrier_profession_id)
+      rejected_ids = ProfessionMapping.where(status: "rejected").select(:carrier_profession_id)
       rel = rel.where(id: approved_ids).where.not(id: rejected_ids)
-
     when "pending"
-      rel = rel.where(
-        id: ProfessionMapping.where(status: "pending").select(:carrier_profession_id).distinct
-      )
+      pending_ids = ProfessionMapping.where(status: "pending").select(:carrier_profession_id)
+      rel = rel.where(id: pending_ids)
     when "rejected"
-      rel = rel.where(
-        id: ProfessionMapping.where(status: "rejected").select(:carrier_profession_id).distinct
-      )
+      rejected_ids = ProfessionMapping.where(status: "rejected").select(:carrier_profession_id)
+      rel = rel.where(id: rejected_ids)
     else
-      # "all" → déjà géré plus haut (exclusion des rejected seulement)
+      rel = rel.where("profession_mappings.id IS NULL OR profession_mappings.status != ?", "rejected")
     end
 
-    # 🔹 “Présent dans une seule compagnie”
+    # filtre only_once (on garde ta logique telle quelle)
     if @only_once
       mapping_status_filter =
         case @status
-        when "approved", "pending", "rejected" then { status: @status }
+        when "approved", "pending", "rejected"
+          { status: @status }
         else
           { status: ["approved", "pending"] }
         end
@@ -73,7 +65,12 @@ class Admin::CarrierProfessionsController < ApplicationController
         .select(:profession_id)
 
       rel = rel.joins(:profession_mappings)
-               .where(profession_mappings: { profession_id: one_carrier_prof_ids })
+              .where(profession_mappings: { profession_id: one_carrier_prof_ids })
+    end
+
+    # ⬅⬅⬅ NOUVEAU : filtre chien / chat direct
+    if @species
+      rel = rel.where(species: @species)
     end
 
     rel = rel.distinct
@@ -82,7 +79,6 @@ class Admin::CarrierProfessionsController < ApplicationController
     @carriers = Carrier.order(:name)
 
     profession_ids = @carrier_professions.map { |cp| cp.profession_mappings.first&.profession_id }.compact.uniq
-
     @carriers_count_by_prof =
       if profession_ids.any?
         ProfessionMapping
@@ -96,21 +92,29 @@ class Admin::CarrierProfessionsController < ApplicationController
       end
   end
 
+
   def show
     @carrier_profession = CarrierProfession
-                            .includes(carrier_referential: :carrier, profession_mappings: :profession)
-                            .find(params[:id])
+      .includes(carrier_referential: :carrier, profession_mappings: :profession)
+      .find(params[:id])
+
     @mapping = @carrier_profession.profession_mappings.first
   end
 
+  # =========================
+  # BULK SELECT / ASSIGN
+  # =========================
+
   def bulk_select
-    @selected ||= []
-    @ids         = Array(params[:ids]).map(&:to_i).uniq
-    bulk_action  = params[:bulk_action].to_s
-    @q           = params[:q].to_s
+    @selected   ||= []
+    @ids          = Array(params[:ids]).map(&:to_i).uniq
+    bulk_action   = params[:bulk_action].to_s
+    @species      = params[:species].presence_in(%w[dog cat]) || "dog"
+    @q            = params[:q].to_s
 
     if @ids.empty?
-      redirect_to admin_carrier_professions_path, alert: "Sélection vide."
+      redirect_to admin_carrier_professions_path(status: "all", species: @species),
+                  alert: "Sélection vide."
       return
     end
 
@@ -126,7 +130,7 @@ class Admin::CarrierProfessionsController < ApplicationController
         end
       end
 
-      redirect_to admin_carrier_professions_path,
+      redirect_to admin_carrier_professions_path(status: "all", species: @species),
                   notice: "#{updated} élément(s) passé(s) en 'rejected'."
       return
 
@@ -143,7 +147,7 @@ class Admin::CarrierProfessionsController < ApplicationController
         end
       end
 
-      redirect_to admin_carrier_professions_path,
+      redirect_to admin_carrier_professions_path(status: "all", species: @species),
                   notice: "#{updated} élément(s) passé(s) en 'approved'."
       return
 
@@ -152,15 +156,17 @@ class Admin::CarrierProfessionsController < ApplicationController
                     .includes(carrier_referential: :carrier, profession_mappings: :profession)
                     .where(id: @ids)
 
+      # Candidats = référentiel animaux pour l’espèce choisie
+      rel = Profession.where.not(animal_species: nil).where(animal_species: @species)
+
+      rel = rel.joins(profession_mappings: { carrier_profession: { carrier_referential: :carrier } })
+               .where.not(profession_mappings: { status: "rejected" })
+      rel = rel.left_joins(:profession_synonyms) if defined?(ProfessionSynonym)
+
       if @q.present?
         norm   = LabelNormalizer.call(@q)
         quoted = ActiveRecord::Base.connection.quote(norm)
         like   = "%#{norm.gsub(/\s+/, '%')}%"
-
-        rel = Profession
-                .joins(profession_mappings: { carrier_profession: { carrier_referential: :carrier } })
-                .where.not(profession_mappings: { status: "rejected" })
-        rel = rel.left_joins(:profession_synonyms) if defined?(ProfessionSynonym)
 
         tokens = norm.split.uniq
         roots  = tokens.map { |t| t.sub(/(es|e|s)\z/, "") }.select { |x| x.length >= 5 }.uniq
@@ -168,6 +174,7 @@ class Admin::CarrierProfessionsController < ApplicationController
         if roots.any?
           like_patterns = roots.map { |r| "%#{r}%" }
           name_like_sql  = like_patterns.map { "professions.name_norm LIKE ?" }.join(" OR ")
+
           if defined?(ProfessionSynonym)
             alias_like_sql = like_patterns.map { "profession_synonyms.alias_norm LIKE ?" }.join(" OR ")
             filter_sql     = "(#{name_like_sql}) OR (#{alias_like_sql})"
@@ -202,14 +209,22 @@ class Admin::CarrierProfessionsController < ApplicationController
       else
         @candidates = []
       end
-
-      # render :bulk_select (implicite)
     end
   end
 
   def bulk_assign
     target = Profession.find(params.require(:profession_id))
     ids    = Array(params[:ids]).map(&:to_i).uniq
+
+    species = params[:species].presence_in(%w[dog cat]) || "dog"
+    q       = params[:q].to_s.presence
+
+    # bloquer chien ↔ chat
+    if target.animal_species.present? && target.animal_species != species
+      redirect_to bulk_select_admin_carrier_professions_path(ids: ids, species: species, q: q),
+                  alert: "Tu ne peux pas assigner un #{target.animal_species} depuis l’onglet #{species}."
+      return
+    end
 
     cps = CarrierProfession.includes(:profession_mappings).where(id: ids)
 
@@ -252,9 +267,9 @@ class Admin::CarrierProfessionsController < ApplicationController
         end
 
         if old_prof && old_prof.id != target.id &&
-          ProfessionMapping.where(profession_id: old_prof.id).none?
+           ProfessionMapping.where(profession_id: old_prof.id).none?
           ProfessionSynonym.where(profession_id: old_prof.id)
-                          .update_all(profession_id: target.id) if defined?(ProfessionSynonym)
+                           .update_all(profession_id: target.id) if defined?(ProfessionSynonym)
           old_prof.destroy!
           cleaned += 1
         end
@@ -268,6 +283,7 @@ class Admin::CarrierProfessionsController < ApplicationController
     msg << ", #{alias_conflicts} en conflit" if alias_conflicts > 0
     msg << ". Fiches OGGO nettoyées: #{cleaned}" if cleaned > 0
 
-    redirect_to admin_carrier_professions_path, notice: msg
+    redirect_to admin_carrier_professions_path(status: "all", species: species),
+                notice: msg
   end
 end

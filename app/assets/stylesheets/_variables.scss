@@ -1,0 +1,26 @@
+/* === Variables globales thème teal/navy === */
+
+$bg-gradient-start: #0f172a; // navy très sombre
+$bg-gradient-end:   #1e293b; // bleu nuit
+
+$card-bg: rgba(15,23,42,0.6);
+$card-border: rgba(255,255,255,0.07);
+$card-shadow:
+  0 30px 80px rgba(0,0,0,.9),
+  0 0 120px rgba(16,185,129,.2),
+  0 0 240px rgba(30,64,175,.15);
+
+$primary:        #0f766e;  // vert profond (teal)
+$primary-hover:  #115e59;  // plus sombre
+
+$primary-soft-bg:     rgba(16,185,129,0.08);
+$primary-soft-border: rgba(16,185,129,0.4);
+
+$accent-soft-bg:      rgba(30,64,175,0.15);
+$accent-soft-border:  rgba(30,64,175,0.5);
+
+$text-main: #f8fafc; // texte clair
+$text-dim:  rgba(226,232,240,.6); // texte secondaire
+
+$radius-lg: 16px;
+$radius-md: 10px;

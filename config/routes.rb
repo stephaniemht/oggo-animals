@@ -2,7 +2,7 @@ Rails.application.routes.draw do
   get "home/index"
   namespace :admin do
     root to: "carrier_professions#index"
-    
+
 
     resources :profession_mappings, only: [:index, :update, :edit] do
       post :assign, on: :member
@@ -35,7 +35,7 @@ Rails.application.routes.draw do
     get "professions_php", to: "exports#professions_php"
     get "professions_matrix", to: "exports#professions_matrix"
     get "professions_export", to: "exports#professions"
-
+    get "animals_merge", to: "animals_merge#index", as: :animals_merge
   end
 
   get "up" => "rails/health#show", as: :rails_health_check

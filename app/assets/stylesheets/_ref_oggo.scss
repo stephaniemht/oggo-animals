@@ -1,124 +1,272 @@
 /* ===== Référentiel OGGO — styles page admin/professions ===== */
 
+
+/* -------- TITRE ---------- */
 .cp-title {
-  font-size: 20px;
+  font-size: 28px;
   font-weight: 700;
-  margin: 0 0 12px;
+  margin: 0 0 16px;
+  letter-spacing: -.03em;
+  color: $text-main;
+
+  small {
+    font-size: 14px;
+    font-weight: 500;
+    color: $text-dim;
+    margin-left: 8px;
+  }
 }
 
-/* Cartes / blocs */
+/* -------- CARD / PANNEAU ---------- */
 .card {
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  padding: 12px;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+  background: $card-bg;
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  border: 1px solid $card-border;
+  border-radius: $radius-lg;
+  box-shadow: $card-shadow;
+  padding: 16px;
+  color: $text-main;
 }
 
-/* Barre de filtres */
-#filters-form { margin: 0; }
+/* -------- FORMULAIRE DE FILTRES ---------- */
+#filters-form {
+  margin: 0;
+}
 
 .filters-row {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
-  gap: 10px 12px;
+  align-items: flex-end;
+  gap: 12px;
+  margin-top: 12px;
+
+  label {
+    font-size: 13px;
+    font-weight: 600;
+    color: $text-dim;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+  }
 }
 
-.inp, .sel {
-  min-width: 220px;
-  padding: 8px 10px;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  background: #fff;
-}
-
-.inp:focus, .sel:focus {
+.inp,
+.sel {
+  min-width: 200px;
+  padding: 10px 12px;
+  border-radius: $radius-md;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.08);
+  color: $text-main;
+  font-size: 14px;
+  line-height: 1.3;
   outline: none;
-  border-color: #c7d2fe;
-  box-shadow: 0 0 0 3px rgba(99,102,241,0.15);
+  transition: all .15s ease;
+
+  &::placeholder {
+    color: $text-dim;
+  }
+
+  &:focus {
+    border-color: $primary;
+    box-shadow: 0 0 0 3px rgba(15,118,110,.35);
+    background: rgba(0,0,0,0.4);
+  }
 }
 
-/* Boutons */
+/* -------- BOUTONS ---------- */
 .btn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
-  padding: 8px 12px;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  background: #111827;
+
+  padding: 9px 12px 10px;
+  border-radius: $radius-md;
+  border: 1px solid transparent;
+  background: $primary;
   color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.2;
   text-decoration: none;
   cursor: pointer;
-  transition: transform .02s ease-in;
-}
-.btn:hover { transform: translateY(-1px); }
+  box-shadow: 0 10px 24px rgba(15,118,110,.4);
+  transition: all .15s ease;
 
-.btn[disabled] { opacity: .5; cursor: not-allowed; }
+  &:hover {
+    background: $primary-hover;
+    box-shadow: 0 14px 28px rgba(15,118,110,.5);
+  }
+
+  &:active {
+    transform: translateY(1px) scale(.99);
+  }
+}
+
+.btn[disabled] {
+  opacity: .4;
+  cursor: not-allowed;
+  box-shadow: none;
+}
 
 .btn.secondary {
-  background: #f9fafb;
-  color: #111827;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.12);
+  color: $text-main;
+  box-shadow: 0 10px 24px rgba(0,0,0,.4);
+
+  &:hover {
+    background: rgba(255,255,255,0.08);
+  }
 }
 
+/* Lien style bouton "ghost" */
 .btn-link {
-  color: #2563eb;
-  text-decoration: none;
-  font-weight: 600;
-}
-.btn-link:hover { text-decoration: underline; }
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 
-/* Toolbar (compteurs + pagination) */
+  padding: 8px 10px;
+  border-radius: $radius-md;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.2;
+  text-decoration: none;
+
+  background: $accent-soft-bg;
+  border: 1px solid $accent-soft-border;
+  color: $text-main;
+  box-shadow: 0 10px 24px rgba(0,0,0,.4);
+
+  &:hover {
+    background: rgba(30,58,138,.2);
+  }
+}
+
+/* -------- TOOLBAR (compteurs + pagination) ---------- */
 .toolbar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
+  padding: 12px 16px;
+
+  background: rgba(0,0,0,0.2);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: $radius-lg;
+  box-shadow: $card-shadow;
+  color: $text-main;
+
+  .muted {
+    color: $text-dim;
+    font-size: 13px;
+    font-weight: 500;
+  }
 }
 
-/* Table */
-.table-wrap { border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden; }
-.table-scroll { overflow: auto; }
+/* -------- WRAPPER DU TABLEAU ---------- */
+.table-wrap {
+  border-radius: $radius-lg;
+  background: $card-bg;
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  border: 1px solid $card-border;
+  box-shadow: $card-shadow;
+  overflow: hidden;
+  margin-top: 16px;
+  color: $text-main;
+}
 
+.table-scroll {
+  overflow: auto;
+  max-height: 65vh;
+}
+
+/* -------- TABLEAU ---------- */
 .cp-table {
   width: 100%;
-  border-collapse: collapse;
-  background: #fff;
+  border-collapse: separate;
+  border-spacing: 0;
+  color: $text-main;
+  background: transparent;
+  font-size: 14px;
 }
 
 .cp-table thead th {
-  background: #f9fafb;
+  position: sticky;
+  top: 0;
+  z-index: 5;
+
+  background: rgba(0,0,0,0.35);
+  backdrop-filter: blur(12px) saturate(160%);
+  -webkit-backdrop-filter: blur(12px) saturate(160%);
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+
+  color: $text-dim;
+  font-size: 11px;
   font-weight: 600;
   text-align: left;
-  padding: 10px;
-  border-bottom: 1px solid #e5e7eb;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  padding: 10px 14px;
+  white-space: nowrap;
 }
 
 .cp-table tbody td {
-  padding: 10px;
-  border-bottom: 1px solid #f1f5f9;
+  padding: 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  color: $text-main;
+
+  strong {
+    color: $text-main;
+    font-weight: 600;
+    letter-spacing: -.02em;
+  }
 }
 
-.data-row:hover { background: #fcfcfd; }
+.data-row:nth-child(even) {
+  background: rgba(255,255,255,0.02);
+}
+.data-row:hover {
+  background: rgba(15,118,110,0.07);
+  transition: background .12s ease;
+}
 
-/* Utilitaires */
-.muted { color: #6b7280; }
-.ta-right { text-align: right; }
-.ta-center { text-align: center; }
-.w-120 { width: 120px; }
+/* -------- PETITES ÉTIQUETTES (pill) ---------- */
 .pill {
   display: inline-block;
   font-size: 12px;
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: #f3f4f6;
-  border: 1px solid #e5e7eb;
-  color: #374151;
+  font-weight: 500;
+  line-height: 1.2;
+  padding: 4px 8px;
+  border-radius: $radius-md;
+  background: $primary-soft-bg;
+  border: 1px solid $primary-soft-border;
+  color: $text-main;
+  white-space: nowrap;
 }
 
-/* Responsive simple */
+/* -------- TEXTE UTILITAIRE ---------- */
+.muted {
+  color: $text-dim;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.3;
+}
+
+.ta-right   { text-align: right; }
+.ta-center  { text-align: center; }
+.w-120      { width: 120px; }
+
+/* -------- RESPONSIVE ---------- */
 @media (max-width: 800px) {
-  .filters-row { gap: 8px; }
+  .filters-row { gap: 10px; }
   .inp, .sel { min-width: 160px; }
   .w-120 { width: auto; }
+
+  .toolbar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }

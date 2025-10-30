@@ -1,81 +1,232 @@
-/* ==== Navbar / Layout global ==== */
+/* ==== Navbar / Layout global (thème teal/navy glass) ==== */
 
-$app-text: #111827;
+/* On réutilise les variables globales qu’on a posées dans les autres fichiers :
+   $bg-gradient-start, $bg-gradient-end,
+   $card-bg, $card-border, $card-shadow,
+   $primary, $primary-hover,
+   $text-main, $text-dim,
+   $radius-lg, $radius-md
+*/
 
+/* ---------- BODY GLOBAL ---------- */
 .app-body {
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans,
-               "Helvetica Neue", Arial, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", sans-serif;
-  color: $app-text;
+  font-family:
+    system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans,
+    "Helvetica Neue", Arial, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol",
+    sans-serif;
+  color: $text-main;
+  background: radial-gradient(
+      circle at 20% 20%,
+      rgba(16,185,129,0.07) 0%,
+      rgba(0,0,0,0) 60%
+    ),
+    radial-gradient(
+      circle at 80% 10%,
+      rgba(30,64,175,0.08) 0%,
+      rgba(0,0,0,0) 70%
+    ),
+    radial-gradient(
+      circle at 50% 80%,
+      rgba(15,23,42,0.6) 0%,
+      rgba(0,0,0,0) 70%
+    ),
+    linear-gradient(
+      160deg,
+      $bg-gradient-start 0%,
+      $bg-gradient-end 80%
+    );
+  min-height: 100vh;
+  padding: 16px;
+  box-sizing: border-box;
+  /* petit grain pro */
+  background-blend-mode: screen, normal, normal, normal;
 }
 
-/* Palette partagée avec tes pages */
-$primary:       #6d28d9;
-$primary-hover: #5b21b6;
-$header-bg:     #f3e8ff;
-$header-border: #e9d5ff;
-$text:          #111827;
-
-/* Barre de navigation */
+/* ---------- NAVBAR TOP ---------- */
 .topnav {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 10px;
-  background: linear-gradient(180deg, #faf5ff, #f8f5ff);
-  border: 1px solid $header-border;
-  border-radius: 12px;
-  padding: 10px;
-  box-shadow: 0 1px 2px rgba(0,0,0,.04);
-  margin-bottom: 12px;
+  gap: 12px;
+
+  padding: 12px 16px;
+  border-radius: $radius-lg;
+
+  background: radial-gradient(
+      circle at 0% 0%,
+      rgba(16,185,129,0.18) 0%,
+      rgba(16,185,129,0) 60%
+    ),
+    radial-gradient(
+      circle at 100% 0%,
+      rgba(30,64,175,0.18) 0%,
+      rgba(30,64,175,0) 60%
+    ),
+    rgba(0,0,0,0.4);
+  backdrop-filter: blur(16px) saturate(160%);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+
+  border: 1px solid rgba(255,255,255,0.12);
+  box-shadow: 0 24px 60px rgba(0,0,0,.8),
+              0 0 120px rgba(16,185,129,.25),
+              0 0 240px rgba(30,64,175,.2);
+  color: $text-main;
+
+  margin-bottom: 16px;
 }
 
+/* zone flexible au milieu */
+.topnav .spacer {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ---------- BRAND / LOGO ---------- */
 .topnav .brand {
-  font-weight: 800;
-  letter-spacing: .3px;
-  color: #4c1d95;
-  background: #ede9fe;
-  border: 1px solid $header-border;
-  padding: 6px 10px;
-  border-radius: 10px;
+  font-weight: 600;
+  font-size: 14px;
+  line-height: 1.2;
+  letter-spacing: -.03em;
+  color: $text-main;
+
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.16);
+  border-radius: $radius-md;
+  padding: 8px 10px;
+
+  box-shadow: 0 16px 32px rgba(0,0,0,.8),
+              0 0 40px rgba(16,185,129,.4),
+              0 0 80px rgba(30,64,175,.35);
+
+  /* mini pastille verte dans le coin pour le côté "live / dashboard" */
+  position: relative;
+
+  &::after {
+    content: "";
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    width: 8px;
+    height: 8px;
+    background: radial-gradient(circle at 30% 30%, #10b981 0%, rgba(16,185,129,0) 70%);
+    border-radius: 999px;
+    box-shadow: 0 0 12px rgba(16,185,129,.8);
+  }
 }
 
-.topnav .spacer { flex: 1; }
-
+/* ---------- LIENS NAV ---------- */
 .nav-link {
-  display: inline-block;
-  padding: 8px 12px;
-  border: 1px solid #eceafc;
-  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  height: 34px;
+  padding: 0 12px;
+  border-radius: $radius-md;
+  border: 1px solid rgba(255,255,255,0.12);
+
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1;
   text-decoration: none;
-  color: $text;
-  background: #fff;
-  transition: background .15s ease, border-color .15s ease, transform .05s ease;
+  color: $text-main;
+
+  background: rgba(255,255,255,0.04);
+  box-shadow: 0 14px 32px rgba(0,0,0,.8);
+
+  transition: all .15s ease;
 
   &:hover {
-    background: $header-bg;
-    border-color: $header-border;
+    background: rgba(255,255,255,0.07);
+    border-color: rgba(255,255,255,0.2);
+    box-shadow:
+      0 18px 40px rgba(0,0,0,.9),
+      0 0 24px rgba(16,185,129,.4),
+      0 0 60px rgba(30,64,175,.4);
+  }
+
+  &:active {
+    transform: translateY(1px) scale(.99);
   }
 
   &.active {
-    background: #ede9fe;
+    background: radial-gradient(
+        circle at 0% 0%,
+        rgba(16,185,129,0.22) 0%,
+        rgba(16,185,129,0) 60%
+      ),
+      radial-gradient(
+        circle at 100% 0%,
+        rgba(30,64,175,0.22) 0%,
+        rgba(30,64,175,0) 60%
+      ),
+      rgba(0,0,0,0.6);
     border-color: $primary;
-    color: #4c1d95;
-    box-shadow: inset 0 0 0 1px rgba(109,40,217,.15);
+    color: #fff;
+    box-shadow:
+      0 20px 48px rgba(0,0,0,1),
+      0 0 40px rgba(16,185,129,.5),
+      0 0 80px rgba(30,64,175,.5),
+      inset 0 0 12px rgba(255,255,255,.12);
   }
 }
 
-/* Mobile: la nav casse la ligne proprement */
+/* ---------- RESPONSIVE NAV ---------- */
 @media (max-width: 760px) {
-  .topnav { flex-wrap: wrap; gap: 8px; }
-  .topnav .spacer { display: none; }
+  .topnav {
+    flex-wrap: wrap;
+    gap: 10px 8px;
+    padding: 12px;
+  }
+
+  .topnav .spacer {
+    display: none;
+  }
+
+  .nav-link {
+    flex: 1 1 auto;
+    justify-content: center;
+    min-width: calc(50% - 8px);
+  }
 }
 
-/* Flash messages */
+/* ---------- FLASH MESSAGES (notices / alerts) ---------- */
+/* On les stylise comme des toasts sombres translucides posés sous la nav */
+
 .flash {
-  margin: 8px 0;
-  padding: 10px 12px;
-  border: 1px solid #81c784;
-  background: #e8f5e9;
-  border-radius: 10px;
-  &.alert, &.error { background: #fdecea; border-color: #f5c6cb; }
-  &.notice, &.success { background: #ecfdf5; border-color: #a7f3d0; }
+  margin: 8px 0 16px;
+  padding: 12px 14px;
+  border-radius: $radius-md;
+
+  font-size: 13px;
+  line-height: 1.4;
+  font-weight: 500;
+  color: $text-main;
+
+  background: rgba(0,0,0,0.5);
+  border: 1px solid rgba(255,255,255,0.16);
+  box-shadow:
+    0 20px 48px rgba(0,0,0,.9),
+    0 0 60px rgba(16,185,129,.4),
+    0 0 100px rgba(30,64,175,.4);
+
+  &.notice,
+  &.success {
+    /* halo vert */
+    box-shadow:
+      0 20px 48px rgba(0,0,0,.9),
+      0 0 60px rgba(16,185,129,.6),
+      0 0 100px rgba(16,185,129,.4);
+    border-color: rgba(16,185,129,.4);
+  }
+
+  &.alert,
+  &.error {
+    /* halo rouge/orange (erreur) */
+    box-shadow:
+      0 20px 48px rgba(0,0,0,.9),
+      0 0 60px rgba(220,38,38,.6),
+      0 0 100px rgba(220,38,38,.4);
+    border-color: rgba(220,38,38,.4);
+  }
 }

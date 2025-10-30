@@ -1,173 +1,363 @@
+@import "variables";
 @import "navbar";
 @import "ref_oggo";
 @import "merge_suggestions";
-/* === Page: CarrierProfessions#index — styles extraits de l'inline === */
+/* ================================
+   THEME GLOBAL (dark premium)
+   ================================ */
 
-/* Palette (équivalent de :root {...}) */
-$primary:        #6d28d9;
-$primary-hover:  #5b21b6;
-$primary-soft:   #ede9fe;
-$header-bg:      #f3e8ff;
-$header-border:  #e9d5ff;
-$border:         #e5e7eb;
-$shadow:         0 1px 2px rgba(0,0,0,.04);
-$text:           #111827;
-$muted:          #6b7280;
-$row-alt:        #faf5ff;
-$row-hover:      #ede9fe;
+/* Palette principale */
+$bg-gradient-start: #0b1b1d;   /* bleu pétrole très sombre */
+$bg-gradient-end:   #101c2a;   /* bleu nuit */
+$card-bg:           rgba(18, 28, 37, 0.6); /* glass card */
+$card-border:       rgba(255,255,255,0.07);
+$card-shadow:       0 30px 80px rgba(0,0,0,.6);
+
+$primary:           #0f766e;   /* vert profond genre teal dark */
+$primary-hover:     #115e59;   /* un poil plus sombre */
+$primary-soft-bg:   rgba(15,118,110,.12);
+$primary-soft-border: rgba(15,118,110,.4);
+
+$accent:            #1e3a8a;   /* bleu foncé / navy */
+$accent-soft-bg:    rgba(30,58,138,.12);
+$accent-soft-border:rgba(30,58,138,.4);
+
+$text-main:         #f9fafb;   /* quasi blanc */
+$text-dim:          #9ca3af;   /* gris bleuté */
+$text-muted:        #6b7280;   /* gris plus froid */
+
+$table-row-alt:     rgba(255,255,255,0.02);
+$table-row-hover:   rgba(15,118,110,0.07); /* léger vert en hover */
+
+$radius-lg:         16px;
+$radius-md:         10px;
+
+/* Layout global : applique ça dans body avec <%= stylesheet %> */
+body {
+  background: radial-gradient(circle at 20% 20%, $bg-gradient-start 0%, $bg-gradient-end 60%);
+  background-color: $bg-gradient-end;
+  color: $text-main;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Inter", "Roboto", "Segoe UI", sans-serif;
+  line-height: 1.4;
+}
 
 /* Utilitaires légers */
 .ta-right { text-align: right !important; }
 .w-48    { width: 48px !important; }
 .w-120   { width: 120px !important; }
+.w-200   { width: 200px !important; }
 .w-220   { width: 220px !important; }
 .w-260   { width: 260px !important; }
 
-
-/* Titre de page */
+/* ================================
+   TITRE DE PAGE
+   ================================ */
 .cp-title {
-  margin: 0 0 12px;
-  font-size: 24px;
-  font-weight: 800;
-  letter-spacing: .3px;
-  color: $text;
-}
-
-/* Carte / bloc */
-.card {
-  border: 1px solid $border;
-  border-radius: 12px;
-  padding: 12px;
-  background: #fff;
-  box-shadow: $shadow;
-}
-
-/* Filtres */
-.filters-row {
+  margin: 0 0 16px;
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -.03em;
+  color: $text-main;
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px;
-  margin-top: 10px;
+  align-items: baseline;
+  gap: 8px;
 
-  label { font-weight: 600; color: #374151; }
-}
-
-.inp, .sel {
-  padding: 8px 10px;
-  border: 1px solid $border;
-  border-radius: 8px;
-  outline: none;
-  background: #fff;
-  min-width: 220px;
-
-  &:focus {
-    border-color: $primary;
-    box-shadow: 0 0 0 3px rgba(109,40,217,.15);
+  small {
+    font-size: 14px;
+    font-weight: 500;
+    color: $text-dim;
+    letter-spacing: 0;
   }
 }
 
-/* Boutons */
+/* ================================
+   CARD / PANNEAU
+   ================================ */
+.card {
+  background: $card-bg;
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  border: 1px solid $card-border;
+  border-radius: $radius-lg;
+  box-shadow: $card-shadow;
+  padding: 16px;
+  color: $text-main;
+}
+
+/* ================================
+   BARRES DE FILTRES
+   ================================ */
+.filters-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+  margin-top: 12px;
+
+  label {
+    font-size: 13px;
+    font-weight: 600;
+    color: $text-dim;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+  }
+}
+
+/* Champs texte / select */
+.inp,
+.sel {
+  min-width: 200px;
+  padding: 10px 12px;
+  border-radius: $radius-md;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.08);
+  color: $text-main;
+  font-size: 14px;
+  line-height: 1.3;
+  outline: none;
+  transition: all .15s ease;
+
+  &::placeholder {
+    color: $text-dim;
+  }
+
+  &:focus {
+    border-color: $primary;
+    box-shadow: 0 0 0 3px rgba(15,118,110,.35);
+    background: rgba(0,0,0,0.4);
+  }
+}
+
+/* ================================
+   BOUTONS
+   ================================ */
+
 .btn {
-  padding: 8px 12px;
-  border: 1px solid transparent;
-  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1.2;
+  gap: 6px;
+
   background: $primary;
   color: #fff;
+  border: 1px solid transparent;
+  border-radius: $radius-md;
+  padding: 9px 12px 10px;
+  font-size: 14px;
+  font-weight: 600;
   cursor: pointer;
-  transition: background .15s ease, transform .05s ease;
+  box-shadow: 0 10px 24px rgba(15,118,110,.4);
+  transition: all .15s ease;
 
-  &:hover  { background: $primary-hover; }
-  &:active { transform: translateY(1px); }
+  &:hover  {
+    background: $primary-hover;
+    box-shadow: 0 14px 28px rgba(15,118,110,.5);
+  }
+
+  &:active {
+    transform: translateY(1px) scale(.99);
+  }
 }
 
+/* Variante soft / secondaire */
 .btn.secondary {
-  background: #f3f4f6;
-  color: $text;
-  border-color: $border;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.12);
+  color: $text-main;
+  box-shadow: 0 10px 24px rgba(0,0,0,.4);
 
-  &:hover { background: #e5e7eb; }
+  &:hover {
+    background: rgba(255,255,255,0.08);
+  }
 }
 
-/* Tableau */
+.btn[disabled] {
+  opacity: .4;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* Lien-bouton style ghost */
+a.btn-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1.2;
+
+  padding: 8px 10px;
+  border-radius: $radius-md;
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+
+  background: $accent-soft-bg;
+  border: 1px solid $accent-soft-border;
+  color: $text-main;
+  box-shadow: 0 10px 24px rgba(0,0,0,.4);
+
+  &:hover {
+    background: rgba(30,58,138,.2);
+  }
+}
+
+/* ================================
+   TABLE WRAPPER + TOOLBAR
+   ================================ */
+
 .table-wrap {
-  margin-top: 12px;
-  border: 1px solid $border;
-  border-radius: 12px;
+  margin-top: 16px;
+  background: $card-bg;
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  border: 1px solid $card-border;
+  border-radius: $radius-lg;
+  box-shadow: $card-shadow;
   overflow: hidden;
-  background: #fff;
+  color: $text-main;
 }
 
+/* barre du haut (sélection / pagination / compteur) */
 .toolbar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 10px;
-  padding: 10px;
-  background: #faf5ff;
-  border-bottom: 1px solid $header-border;
+  gap: 12px;
+  padding: 12px 16px;
+  background: rgba(0,0,0,0.2);
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+  color: $text-main;
+
+  .muted {
+    font-size: 13px;
+    font-weight: 500;
+    color: $text-dim;
+  }
 }
 
-.muted { color: $muted; font-size: 13px; }
-.pill  {
+/* petit compteur/pill top bar */
+.pill {
   display: inline-block;
   padding: 4px 8px;
-  border-radius: 8px;
-  background: $primary-soft;
-  color: #4c1d95;
+  border-radius: $radius-md;
+  background: $primary-soft-bg;
+  border: 1px solid $primary-soft-border;
+  color: $text-main;
   font-size: 12px;
-  border: 1px solid $header-border;
+  font-weight: 500;
+  line-height: 1.2;
 }
 
-.table-scroll { max-height: 65vh; overflow: auto; }
+/* ================================
+   TABLE SCROLL + TABLE
+   ================================ */
 
-.cp-table { width: 100%; border-collapse: separate; border-spacing: 0; background: #fff; }
+.table-scroll {
+  max-height: 65vh;
+  overflow: auto;
+}
 
+.cp-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  color: $text-main;
+  background: transparent;
+  font-size: 14px;
+}
+
+/* header du tableau */
 .cp-table thead th {
-  position: sticky; top: 0; z-index: 1;
-  background: $header-bg;
-  font-size: 12px;
+  position: sticky;
+  top: 0;
+  z-index: 5;
+
+  background: rgba(0,0,0,0.35);
+  backdrop-filter: blur(12px) saturate(160%);
+  -webkit-backdrop-filter: blur(12px) saturate(160%);
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+
+  color: $text-dim;
+  font-size: 11px;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: .04em;
-  color: #4b5563;
-  border-bottom: 1px solid $header-border;
-  padding: 10px 12px;
+  letter-spacing: .08em;
+
+  padding: 10px 14px;
   text-align: left;
+  white-space: nowrap;
 }
 
+/* cellules */
 .cp-table tbody td {
-  padding: 12px;
-  border-bottom: 1px solid #f3f4f6;
+  padding: 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  color: $text-main;
+
+  strong {
+    color: $text-main;
+    font-weight: 600;
+    letter-spacing: -.02em;
+  }
 }
 
-.cp-table tbody tr.data-row:nth-child(even) { background: $row-alt; }
+/* alternance et hover */
+.cp-table tbody tr.data-row:nth-child(even) {
+  background: $table-row-alt;
+}
 .cp-table tbody tr.data-row:hover {
-  background: $row-hover;
+  background: $table-row-hover;
   transition: background .12s ease;
 }
 
-/* Badges de statut */
+/* ================================
+   BADGES STATUT
+   ================================ */
+
 .badge {
   display: inline-block;
+  min-width: 70px;
+  text-align: center;
+
   padding: 4px 8px;
   border-radius: 999px;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
+  line-height: 1.2;
   border: 1px solid transparent;
 }
-.badge.unmapped { background:#fff7ed; color:#9a3412; border-color:#fed7aa; }
-.badge.approved { background:#ecfdf5; color:#065f46; border-color:#a7f3d0; }
-.badge.pending  { background:#eff6ff; color:#1e40af; border-color:#bfdbfe; }
-.badge.rejected { background:#fef2f2; color:#991b1b; border-color:#fecaca; }
 
-/* Lien-bouton “Changer” */
-a.btn-link {
-  display: inline-block;
-  padding: 8px 10px;
-  border: 1px solid $header-border;
-  border-radius: 8px;
-  background: #faf5ff;
-  color: #4c1d95;
-  text-decoration: none;
+.badge.unmapped {
+  background: rgba(251,191,36,.12);
+  border-color: rgba(251,191,36,.4);
+  color: #fcd34d;
+}
 
-  &:hover { background: #f3e8ff; }
+.badge.approved {
+  background: rgba(16,185,129,.12);
+  border-color: rgba(16,185,129,.4);
+  color: #6ee7b7;
+}
+
+.badge.pending {
+  background: rgba(96,165,250,.12);
+  border-color: rgba(96,165,250,.4);
+  color: #93c5fd;
+}
+
+.badge.rejected {
+  background: rgba(248,113,113,.12);
+  border-color: rgba(248,113,113,.4);
+  color: #fca5a5;
+}
+
+/* ================================
+   TEXTE SECONDAIRE
+   ================================ */
+
+.muted {
+  color: $text-dim;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.3;
 }

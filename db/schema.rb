@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2025_10_06_120204) do
+ActiveRecord::Schema[7.2].define(version: 2025_10_30_132548) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_trgm"
   enable_extension "plpgsql"
@@ -22,9 +22,11 @@ ActiveRecord::Schema[7.2].define(version: 2025_10_06_120204) do
     t.string "external_label_norm"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "species"
     t.index ["carrier_referential_id", "external_label_norm"], name: "idx_on_carrier_referential_id_external_label_norm_4917b5cfa4", unique: true
     t.index ["carrier_referential_id"], name: "index_carrier_professions_on_carrier_referential_id"
     t.index ["external_label_norm"], name: "index_carrier_professions_on_label_norm_trgm", opclass: :gin_trgm_ops, using: :gin
+    t.index ["species"], name: "index_carrier_professions_on_species"
   end
 
   create_table "carrier_referentials", force: :cascade do |t|
@@ -46,7 +48,7 @@ ActiveRecord::Schema[7.2].define(version: 2025_10_06_120204) do
   end
 
   create_table "profession_mappings", force: :cascade do |t|
-    t.bigint "profession_id", null: false
+    t.bigint "profession_id"
     t.bigint "carrier_profession_id", null: false
     t.string "status"
     t.float "confidence"
@@ -88,6 +90,10 @@ ActiveRecord::Schema[7.2].define(version: 2025_10_06_120204) do
     t.string "name_norm"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "animal_species"
+    t.string "animal_kind"
+    t.index ["animal_kind"], name: "index_professions_on_animal_kind"
+    t.index ["animal_species"], name: "index_professions_on_animal_species"
     t.index ["name_norm"], name: "index_professions_on_name_norm", unique: true
     t.index ["name_norm"], name: "index_professions_on_name_norm_trgm", opclass: :gin_trgm_ops, using: :gin
   end

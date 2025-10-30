@@ -1,5 +1,5 @@
 class ProfessionMapping < ApplicationRecord
-  belongs_to :profession
+  belongs_to :profession, optional: true
   belongs_to :carrier_profession
 
   enum status: { pending: "pending", approved: "approved", rejected: "rejected" }, _default: "pending"

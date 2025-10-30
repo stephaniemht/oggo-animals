@@ -1,12 +1,32 @@
-<h1 class="cp-title">Métiers des compagnies</h1>
+<h1 class="cp-title">Animaux des compagnies</h1>
+
+<!-- 🔹 ONGlets espèces -->
+<div style="display:flex; gap:8px; margin: 8px 0 12px;">
+  <% current_species = params[:species].presence_in(%w[dog cat]) || "dog" %>
+  <% base_params = request.query_parameters.except(:page).symbolize_keys %>
+
+  <%= link_to "🐶 Chiens",
+      admin_carrier_professions_path(base_params.merge(species: "dog", page: 1)),
+      class: "btn",
+      style: "padding:8px 12px; border-radius:12px; #{current_species=='dog' ? 'background:#ede9fe; font-weight:600;' : ''}" %>
+
+  <%= link_to "🐱 Chats",
+      admin_carrier_professions_path(base_params.merge(species: "cat", page: 1)),
+      class: "btn",
+      style: "padding:8px 12px; border-radius:12px; #{current_species=='cat' ? 'background:#ede9fe; font-weight:600;' : ''}" %>
+</div>
 
 <!-- ==== FORMULAIRE DE FILTRES (GET) ==== -->
 <div class="card">
   <%= form_with url: admin_carrier_professions_path, method: :get, local: true,
                 html: { id: "filters-form" } do %>
+
+    <!-- ✅ on garde l’onglet courant -->
+    <%= hidden_field_tag :species, current_species %>
+
     <div class="filters-row">
       <label>Recherche</label>
-      <%= text_field_tag :q, @q, placeholder: "ex: radiologue, coiffeur, avocat...", class: "inp" %>
+      <%= text_field_tag :q, @q, placeholder: "ex: Siamois, Berger allemand, etc .. ", class: "inp" %>
 
       <label>Compagnie</label>
       <%= select_tag :carrier_id,
@@ -25,7 +45,10 @@
 
       <%= submit_tag "Filtrer", class: "btn" %>
       <% if params[:carrier_id].present? || @q.present? || @status != "all" || @only_once %>
-        <%= link_to "Réinitialiser", admin_carrier_professions_path, class: "btn secondary" %>
+        <!-- ✅ reset reste sur le même onglet -->
+        <%= link_to "Réinitialiser",
+                    admin_carrier_professions_path(species: current_species),
+                    class: "btn secondary" %>
       <% end %>
     </div>
   <% end %>
@@ -34,6 +57,9 @@
 <!-- ==== FORMULAIRE DE SÉLECTION (POST) ==== -->
 <%= form_with url: bulk_select_admin_carrier_professions_path, method: :post, local: true,
               html: { id: "bulk-form", "data-turbo": "false" } do %>
+
+  <!-- ✅ on propage l’onglet à la page bulk -->
+  <%= hidden_field_tag :species, current_species %>
 
   <div class="table-wrap">
     <div class="toolbar">
@@ -46,13 +72,12 @@
       <%= select_tag :bulk_action,
             options_for_select([
               ["— Choisir une action —", ""],
-              ["Changer en masse (assigner à une profession)", "bulk_assign"], 
+              ["Changer en masse (assigner à une profession)", "bulk_assign"],
               ["Passer le statut en 'approved'", "mark_approved"],
               ["Passer le statut en 'rejected'", "mark_rejected"]
             ]),
             class: "sel",
             required: true %>
-
 
       <%= submit_tag "Appliquer", id: "bulk-submit", class: "btn secondary" %>
 
@@ -64,8 +89,6 @@
         </span>
       <% end %>
     </div>
-
-
 
     <div class="table-scroll">
       <table class="cp-table">
@@ -119,7 +142,10 @@
               </td>
               <td>
                 <% if m %>
-                  <%= link_to "Changer", edit_admin_profession_mapping_path(m), class: "btn-link" %>
+                  <!-- ✅ on garde l’onglet quand on va “Changer” -->
+                  <%= link_to "Changer",
+                              edit_admin_profession_mapping_path(m, species: current_species),
+                              class: "btn-link" %>
                 <% else %>
                   <span class="muted">(aucune action)</span>
                 <% end %>

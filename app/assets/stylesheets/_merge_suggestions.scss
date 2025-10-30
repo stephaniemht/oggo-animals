@@ -1,114 +1,188 @@
+
+/* -------- SECTION GLOBALE ---------- */
 .fusion-section {
-  margin-bottom: 1.5rem;
+  margin-bottom: 2rem;
+  background: $card-bg;
+  border: 1px solid $card-border;
+  border-radius: $radius-lg;
+  box-shadow: $card-shadow;
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  padding: 1.2rem 1.4rem;
+  color: $text-main;
 }
 
+/* -------- TITRE / RÉSUMÉ CLIQUABLE ---------- */
 .fusion-summary {
   cursor: pointer;
   font-weight: 600;
+  color: $text-main;
+  font-size: 1rem;
+  letter-spacing: -.02em;
+  padding: 0.4rem 0;
+
+  &:hover {
+    color: $primary;
+    text-decoration: underline;
+  }
 }
 
+/* -------- CARTE DE FUSION ---------- */
 .fusion-card {
-  margin-top: 0.5rem;
-  border: 1px solid #eee;
-  padding: 0.5rem;
-  border-radius: 8px;
-  background: #fafafa;
+  margin-top: 0.8rem;
+  border: 1px solid rgba(255,255,255,0.07);
+  padding: 1rem;
+  border-radius: $radius-md;
+  background: rgba(255,255,255,0.04);
+  box-shadow: inset 0 0 24px rgba(0,0,0,.4);
+  color: $text-main;
 }
 
+/* -------- FORMULAIRE DE FUSION ---------- */
 .fusion-form {
   display: flex;
   flex-wrap: wrap;
-  gap: 1rem;
   align-items: flex-end;
+  gap: 1rem;
+  margin-top: 0.6rem;
 }
 
 .fusion-form label {
   font-weight: 600;
+  font-size: 0.9rem;
+  color: $text-dim;
   margin-right: 0.5rem;
 }
 
 .fusion-form input[type="text"],
 .fusion-form input[type="number"],
 .fusion-form select {
-  padding: 6px 10px;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  min-width: 140px;
+  padding: 8px 12px;
+  border-radius: $radius-md;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.04);
+  color: $text-main;
+  min-width: 160px;
+  font-size: 0.9rem;
+
+  &:focus {
+    outline: none;
+    border-color: $primary;
+    box-shadow: 0 0 0 3px rgba(15,118,110,.35);
+    background: rgba(0,0,0,0.4);
+  }
 }
 
+/* -------- BOUTONS ---------- */
 .fusion-submit {
-  background-color: #6d28d9;
-  color: white;
+  background-color: $primary;
+  color: #fff;
   font-weight: 600;
   border: none;
-  padding: 6px 12px;
-  border-radius: 6px;
+  padding: 8px 14px;
+  border-radius: $radius-md;
   cursor: pointer;
+  box-shadow: 0 10px 24px rgba(15,118,110,.4);
+  transition: all .15s ease;
+
+  &:hover {
+    background-color: $primary-hover;
+    box-shadow: 0 14px 28px rgba(15,118,110,.5);
+  }
+
+  &:active {
+    transform: translateY(1px);
+  }
 }
 
 .fusion-reset {
   margin-left: auto;
-  color: #6d28d9;
-  text-decoration: underline;
   font-size: 0.9rem;
+  color: $text-dim;
+  text-decoration: underline;
+  cursor: pointer;
+
+  &:hover {
+    color: $primary;
+  }
 }
 
+/* -------- PAGINATION ---------- */
 .fusion-pagination {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.6rem;
   flex-wrap: wrap;
-  margin: 1rem 0;
+  margin: 1.2rem 0;
+  color: $text-main;
 }
 
 .fusion-page-link {
-  padding: 4px 8px;
-  border-radius: 4px;
-  background-color: #f1f1f1;
-  color: #333;
+  display: inline-block;
+  padding: 6px 10px;
+  border-radius: $radius-md;
+  background-color: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: $text-main;
   text-decoration: none;
+  transition: all .15s ease;
+
+  &:hover {
+    background-color: rgba(255,255,255,0.1);
+    border-color: rgba(255,255,255,0.2);
+  }
 }
 
 .fusion-current-page {
-  font-weight: bold;
-  color: #6d28d9;
+  font-weight: 700;
+  color: $primary;
 }
 
+/* -------- GROUPES ---------- */
 .group-card {
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  padding: 16px;
-  margin-bottom: 16px;
-  background: #fff;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: $radius-lg;
+  padding: 1rem 1.2rem;
+  margin-bottom: 1.2rem;
+  background: rgba(255,255,255,0.03);
+  box-shadow: inset 0 0 32px rgba(0,0,0,.4);
 }
 
 .group-header {
-  margin-bottom: 12px;
+  margin-bottom: 0.8rem;
+  font-weight: 600;
+  color: $text-main;
+  letter-spacing: -.02em;
 }
 
 .group-members {
-  max-height: 200px;
+  max-height: 240px;
   overflow-y: auto;
-  border: 1px dashed #ddd;
-  border-radius: 6px;
-  padding: 8px;
-  background: #f9f9f9;
+  border: 1px dashed rgba(255,255,255,0.1);
+  border-radius: $radius-md;
+  padding: 10px;
+  background: rgba(255,255,255,0.04);
+  box-shadow: inset 0 0 18px rgba(0,0,0,.5);
 }
 
+/* -------- CHECKBOXES / RADIO ---------- */
 .form-check {
   display: flex;
   align-items: center;
   gap: 8px;
   margin-bottom: 6px;
+  color: $text-main;
 }
 
 .form-check input[type="checkbox"],
 .form-check input[type="radio"] {
   margin: 0;
+  accent-color: $primary;
 }
 
+/* -------- DIVISEUR ---------- */
 .divider {
-  margin: 16px 0;
+  margin: 1.5rem 0;
   border: none;
-  border-top: 1px solid #eee;
+  border-top: 1px solid rgba(255,255,255,0.1);
 }

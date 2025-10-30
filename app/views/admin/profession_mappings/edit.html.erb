@@ -1,6 +1,20 @@
 <h1 class="cp-title">Réattribuer le mapping</h1>
 
 <% cp = @mapping.carrier_profession %>
+<% current_species = (@species.presence_in(%w[dog cat]) || "dog") %>
+
+<!-- 🔹 ONGlets espèces -->
+<div style="display:flex; gap:8px; margin: 8px 0 12px;">
+  <%= link_to "🐶 Chiens",
+      edit_admin_profession_mapping_path(@mapping, species: "dog", q: params[:q]),
+      class: "btn",
+      style: "padding:8px 12px; border-radius:12px; #{current_species=='dog' ? 'background:#ede9fe; font-weight:600;' : ''}" %>
+
+  <%= link_to "🐱 Chats",
+      edit_admin_profession_mapping_path(@mapping, species: "cat", q: params[:q]),
+      class: "btn",
+      style: "padding:8px 12px; border-radius:12px; #{current_species=='cat' ? 'background:#ede9fe; font-weight:600;' : ''}" %>
+</div>
 
 <!-- ===== RÉSUMÉ DU MAPPING ACTUEL ===== -->
 <div class="card" style="margin-bottom:12px;">
@@ -26,7 +40,6 @@
         <span class="muted">présent dans :</span>
         <span class="pill"><%= @current_carriers_count %></span>
         <span class="muted">compagnie(s)</span>
-
       </div>
     </div>
   </div>
@@ -35,9 +48,10 @@
 <!-- ===== RECHERCHE (GET) ===== -->
 <div class="card" style="margin-bottom:12px;">
   <%= form_with url: edit_admin_profession_mapping_path(@mapping), method: :get, local: true, html: { style: "margin:0;" } do %>
+    <%= hidden_field_tag :species, current_species %>
     <div class="filters-row">
-      <label>Chercher une profession OGGO</label>
-      <%= text_field_tag :q, @q, placeholder: "ex: coiffeur, avocat, boulanger...", class: "inp" %>
+      <label>Rechercher un animal OGGO</label>
+      <%= text_field_tag :q, @q, placeholder: "ex: berger, siamois…", class: "inp" %>
       <%= submit_tag "Rechercher", class: "btn" %>
       <% if @q.present? %>
         <span class="muted">Résultats pour « <strong><%= @q %></strong> »</span>
@@ -54,7 +68,7 @@
         <table class="cp-table">
           <thead>
             <tr>
-              <th>Profession OGGO</th>
+              <th>Animal OGGO</th>
               <th class="w-120">Nb compagnies</th>
               <th class="w-220">Assigner</th>
             </tr>
@@ -63,15 +77,15 @@
             <% @candidates.each do |p| %>
               <tr class="data-row">
                 <td><strong><%= p.name %></strong></td>
-                <td>
-                  <span class="pill"><%= p.try(:carriers_count).to_i %></span>
-                </td>
+                <td><span class="pill"><%= p.try(:carriers_count).to_i %></span></td>
                 <td>
                   <%= form_with url: assign_admin_profession_mapping_path(@mapping),
                                 method: :post,
                                 local: true,
                                 data: { turbo: false },
                                 html: { style: "margin:0;" } do %>
+                    <%= hidden_field_tag :species, current_species %>
+                    <%= hidden_field_tag :q, @q %>
                     <%= hidden_field_tag :profession_id, p.id %>
                     <%= submit_tag "Assigner", class: "btn secondary" %>
                   <% end %>
@@ -89,7 +103,8 @@
   <% end %>
 <% end %>
 
-
 <p style="margin-top:12px;">
-  <%= link_to "← Retour à la liste", admin_carrier_professions_path, class: "btn-link" %>
+  <%= link_to "← Retour à la liste",
+              admin_carrier_professions_path(species: current_species),
+              class: "btn-link" %>
 </p>

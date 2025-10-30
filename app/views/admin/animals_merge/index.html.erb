@@ -1,0 +1,105 @@
+<h1 class="cp-title">Fusion (Référentiel Animaux)</h1>
+
+<!-- Onglets -->
+<div class="tabs" style="display:flex; gap:8px; margin:8px 0 12px;">
+  <% base_params = request.query_parameters.except(:page).symbolize_keys %>
+  <% active = ->(sp){ (@species == sp) ? "background:#ede9fe; font-weight:600;" : "" } %>
+
+  <%= link_to "🐶 Chiens (#{@count_dogs})",
+      admin_animals_merge_path(base_params.merge(species: "dog", page: 1)),
+      class: "btn", style: "padding:8px 12px; border-radius:12px; #{active.call('dog')}" %>
+
+  <%= link_to "🐱 Chats (#{@count_cats})",
+      admin_animals_merge_path(base_params.merge(species: "cat", page: 1)),
+      class: "btn", style: "padding:8px 12px; border-radius:12px; #{active.call('cat')}" %>
+</div>
+
+<p style="margin:8px 0;">
+  <%= link_to "🧩 Fusion Animaux (Chiens/Chats)", admin_animals_merge_path(species: (params[:species].presence || "dog")), class: "btn secondary" %>
+</p>
+
+
+<div class="card">
+  <%= form_with url: admin_animals_merge_path, method: :get, local: true, data: { turbo: false } do %>
+    <%= hidden_field_tag :species, @species %>
+
+    <div class="filters-row">
+      <label>Recherche</label>
+      <%= text_field_tag :q, @q, placeholder: "ex: berger, siamois…", class: "inp" %>
+
+      <label>Par page</label>
+      <%= select_tag :per_page,
+        options_for_select([50,100,200,500], @per_page),
+        class: "sel", onchange: "this.form.submit();" %>
+
+      <%= hidden_field_tag :page, 1 %>
+
+      <%= submit_tag "Filtrer", class: "btn" %>
+
+      <% if @q.present? || @kind.present? || params[:per_page].present? %>
+        <%= link_to "Réinitialiser", admin_animals_merge_path(species: @species), class: "btn secondary" %>
+      <% end %>
+    </div>
+  <% end %>
+</div>
+
+<div class="toolbar" style="margin: 8px 0;">
+  <span class="muted">
+    <strong><%= @total.to_i %></strong> groupe<%= 's' if @total.to_i != 1 %> de doublons
+  </span>
+
+  <% if @total_pages.to_i > 1 %>
+    <% total_pages_sane = [@total_pages.to_i, 1].max %>
+    <% prev_params = request.query_parameters.merge(page: (@page.to_i - 1).clamp(1, total_pages_sane)) %>
+    <% next_params = request.query_parameters.merge(page: (@page.to_i + 1).clamp(1, total_pages_sane)) %>
+
+    <div style="margin-left:auto; display:flex; align-items:center; gap:8px;">
+      <%= link_to "← Précédent", admin_animals_merge_path(prev_params), class: "btn", disabled: (@page.to_i <= 1) %>
+      <span class="muted">Page <%= @page.to_i %> / <%= @total_pages.to_i %></span>
+      <%= link_to "Suivant →", admin_animals_merge_path(next_params), class: "btn", disabled: (@page.to_i >= @total_pages.to_i) %>
+    </div>
+  <% end %>
+</div>
+
+<% if @groups.blank? %>
+  <div class="card">Aucun doublon trouvé dans cet onglet.</div>
+<% else %>
+  <% @groups.each do |g| %>
+    <% items = @items_by_norm[g.name_norm] || [] %>
+    <div class="card" style="margin-bottom:12px;">
+      <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+        <strong><%= g.name_norm %></strong>
+        <span class="pill"><%= g.c %></span>
+      </div>
+
+      <div class="table-scroll">
+        <table class="cp-table">
+          <thead>
+            <tr>
+              <th>Nom</th>
+              <th style="width:130px;">Type</th>
+              <th style="width:240px;">Fusionner vers…</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% items.each_with_index do |p, idx| %>
+              <tr class="data-row">
+                <td><strong><%= p.name %></strong> <small class="muted">(#<%= p.id %>)</small></td>
+                <td>
+                  <!-- Form: fusionner CE p dans une cible choisie -->
+                  <%= form_with url: merge_into_admin_profession_path(p), method: :post, local: true, data: { turbo: false } do %>
+                    <%= select_tag :target_id,
+                      options_from_collection_for_select(items, :id, :name, selected: (items.first&.id)),
+                      class: "sel", required: true %>
+                    <%= submit_tag "Fusionner", class: "btn secondary",
+                          data: { confirm: "Confirmer fusion : « #{p.name} » sera fusionné dans la cible sélectionnée." } %>
+                  <% end %>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  <% end %>
+<% end %>
