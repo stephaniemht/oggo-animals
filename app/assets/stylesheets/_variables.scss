@@ -8,12 +8,14 @@ $bg-gradient-end:   #1e293b; // bleu nuit/gris ardoise
 
 $accent-green: #10b981; // vert émeraude
 $accent-blue:  #1e40af; // bleu foncé / royal
-
+$accent-soft-bg: rgba(16,185,129,0.05); // ✅ déjà présent
+$accent-soft-border: rgba(16,185,129,0.25); // ✅ ajouté
 /* Couleurs texte */
 $text-main: #f8fafc;   // texte principal clair sur fond sombre
 $text-dim:  #94a3b8;   // texte atténué gris/bleu
 $text-color: #f8fafc;  // alias pour compatibilité ancienne
 $muted:     #94a3b8;   // ancien usage "muted"
+$text-muted: rgba(226,232,240,0.6); // ✅ ajouté
 
 /* Couleurs de surface (cards, panneaux) */
 $card-bg: rgba(15,23,42,0.6);         // panneau sombre translucide
@@ -57,3 +59,28 @@ $button-shadow-hover:
 /* Certaines pages utilisent encore ces classes utilitaires. */
 $text:    $text-main;
 $shadow:  0 1px 2px rgba(0,0,0,.4); // mini ombre fallback pour anciens blocs
+
+/* ===========================
+   Variables supplémentaires pour compatibilité thème complet
+   =========================== */
+
+/* Ombres et surfaces */
+$shadow-card: 0 12px 30px rgba(0,0,0,.6),
+               0 0 60px rgba(16,185,129,.15),
+               0 0 100px rgba(30,64,175,.15);
+
+/* États / statut */
+$success: #10b981;
+$error: #ef4444;
+$warning: #f59e0b;
+
+/* === Compatibilité legacy supplémentaire === */
+
+/* Ancien nom utilisé dans certains écrans */
+$primary-soft-bg: $primary-soft !default;
+$primary-soft-border: $header-border !default;
+
+/* Sélecteurs / chips pastel violets hérités de l’ancienne UI */
+$accent-pill-bg: $accent-soft-bg !default;
+$accent-pill-border: $accent-soft-border !default;
+$accent-pill-text: $accent-green !default;
