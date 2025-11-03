@@ -17,6 +17,10 @@ module OggoAnimals
     config.autoload_lib(ignore: %w[assets tasks])
 
     config.encoding = "utf-8"
+    config.action_dispatch.default_headers.merge!({
+    "Content-Type" => "text/html; charset=utf-8"
+})
+
     # 👉 Autoload + eager load des services
     config.autoload_paths << Rails.root.join("app/services")
     config.eager_load_paths << Rails.root.join("app/services")
