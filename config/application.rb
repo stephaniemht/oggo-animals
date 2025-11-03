@@ -16,8 +16,10 @@ module OggoAnimals
     # Common ones are `templates`, `generators`, or `middleware`, for example.
     config.autoload_lib(ignore: %w[assets tasks])
 
+    config.encoding = "utf-8"
     # 👉 Autoload + eager load des services
     config.autoload_paths << Rails.root.join("app/services")
     config.eager_load_paths << Rails.root.join("app/services")
+
   end
 end
