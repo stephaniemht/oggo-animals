@@ -78,6 +78,9 @@ class Admin::CarrierProfessionsController < ApplicationController
     @carrier_professions = rel.order("carrier_professions.id ASC").limit(2000)
     @carriers = Carrier.order(:name)
 
+    ensure_referential_for(@carrier_professions)
+
+
     profession_ids = @carrier_professions.map { |cp| cp.profession_mappings.first&.profession_id }.compact.uniq
     @carriers_count_by_prof =
       if profession_ids.any?
@@ -285,5 +288,45 @@ class Admin::CarrierProfessionsController < ApplicationController
 
     redirect_to admin_carrier_professions_path(status: "all", species: species),
                 notice: msg
+  end
+
+    private
+
+  # pour chaque carrier_profession qu’on affiche,
+  # si aucun mapping n’existe, on crée la profession + le mapping
+  def ensure_referential_for(carrier_professions)
+    carrier_professions.each do |cp|
+      next if cp.profession_mappings.first.present?
+
+      label = cp.external_label.to_s.strip
+      next if label.blank?
+
+      # on déduit l'espèce depuis le cp (tu la filtres déjà dans l’index)
+      species = cp.species
+
+      # on normalise le nom pour éviter les doublons
+      norm = LabelNormalizer.call(label)
+
+      # on cherche d’abord si on a déjà une profession pour ce nom et cette espèce
+      prof = Profession.where(animal_species: species)
+                       .where("name_norm = ?", norm)
+                       .first
+
+      # sinon on la crée
+      unless prof
+        prof = Profession.create!(
+          name:          label,
+          name_norm:     norm,
+          animal_species: species
+        )
+      end
+
+      # puis on crée le mapping
+      cp.profession_mappings.create!(
+        profession: prof,
+        status:     "approved",
+        confidence: 1.0
+      )
+    end
   end
 end
