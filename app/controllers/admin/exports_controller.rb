@@ -164,10 +164,21 @@ class Admin::ExportsController < ApplicationController
     return "" if str.nil?
     s = str.to_s.dup
 
-    2.times do
-      break unless s.include?("Ã") || s.include?("Â")
-      # ⚠️ d'abord on dit "ce texte était en ISO-8859-1"
-      s = s.force_encoding("ISO-8859-1").encode("UTF-8", invalid: :replace, undef: :replace, replace: "")
+    # on compte les caractères "suspects"
+    suspicious = ["Ã", "Â", "¢", "", ""]
+    needs_fix  = suspicious.any? { |c| s.include?(c) }
+
+    return s unless needs_fix
+
+    # on tente jusqu'à 5 passes max
+    5.times do
+      break unless suspicious.any? { |c| s.include?(c) }
+      s = s.force_encoding("ISO-8859-1").encode(
+        "UTF-8",
+        invalid: :replace,
+        undef:   :replace,
+        replace: ""
+      )
     end
 
     s
