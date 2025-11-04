@@ -92,18 +92,18 @@ class Admin::ExportsController < ApplicationController
   def professions_php
     map = {}
 
-    # a) noms officiels : seulement les professions visibles (au moins 1 mapping non-rejected)
+    # a) noms officiels
     Profession
       .joins(:profession_mappings)
       .where.not(profession_mappings: { status: "rejected" })
       .distinct
       .order(:name)
       .find_each do |p|
-      clean_name = normalize_utf8(p.name.to_s)
-      map[clean_name] = clean_name
+      clean = fix_mojibake(p.name.to_s)
+      map[clean] = clean
     end
 
-    # b) alias (si demandé)
+    # b) alias
     include_aliases = ActiveModel::Type::Boolean.new.cast(params[:include_aliases]) && defined?(ProfessionSynonym)
     alias_count = 0
 
@@ -120,15 +120,14 @@ class Admin::ExportsController < ApplicationController
         .distinct
         .find_each do |row|
 
-        # on nettoie l’alias ET le nom canonique
         alias_label =
           if row.respond_to?(:alias) && row.alias.present?
-            normalize_utf8(row.alias)
+            fix_mojibake(row.alias)
           else
-            normalize_utf8(row.alias_norm)
+            fix_mojibake(row.alias_norm)
           end
 
-        canonical = normalize_utf8(row.canonical_name)
+        canonical = fix_mojibake(row.canonical_name)
 
         next if alias_label.blank?
 
@@ -148,9 +147,8 @@ class Admin::ExportsController < ApplicationController
     php << "\n"
     php << "\$professions = [\n"
 
-    # on trie les clés comme avant
     map.sort_by { |k, _| k.downcase }.each do |k, v|
-      php << "  #{php_quote(normalize_utf8(k))} => #{php_quote(normalize_utf8(v))},\n"
+      php << "  #{php_quote(fix_mojibake(k))} => #{php_quote(fix_mojibake(v))},\n"
     end
 
     php << "];\n"
@@ -164,14 +162,21 @@ class Admin::ExportsController < ApplicationController
 
   private
 
-  # même idée que dans le rake
-  def normalize_utf8(str)
+  # on essaie de "déplier" les chaînes du type "ÃÂ©" -> "é"
+  def fix_mojibake(str)
     return "" if str.nil?
 
-    s = str.dup
-    s.force_encoding("ISO-8859-1").encode("UTF-8")
-  rescue Encoding::UndefinedConversionError, Encoding::InvalidByteSequenceError
-    str.to_s.encode("UTF-8", invalid: :replace, undef: :replace, replace: "")
+    s = str.to_s.dup
+
+    # on essaie plusieurs passes, parce que certaines chaînes sont doublement encodées
+    2.times do
+      break unless s.include?("Ã") || s.include?("Â")
+      s = s.encode("ISO-8859-1", invalid: :replace, undef: :replace, replace: "").force_encoding("UTF-8")
+    end
+
+    s
+  rescue
+    str.to_s
   end
 
   def csv_with_bom(enum)
