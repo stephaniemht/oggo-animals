@@ -21,7 +21,6 @@
   <%= form_with url: admin_carrier_professions_path, method: :get, local: true,
                 html: { id: "filters-form" } do %>
 
-    <!-- ✅ on garde l’onglet courant -->
     <%= hidden_field_tag :species, current_species %>
 
     <div class="filters-row">
@@ -45,7 +44,6 @@
 
       <%= submit_tag "Filtrer", class: "btn" %>
       <% if params[:carrier_id].present? || @q.present? || @status != "all" || @only_once %>
-        <!-- ✅ reset reste sur le même onglet -->
         <%= link_to "Réinitialiser",
                     admin_carrier_professions_path(species: current_species),
                     class: "btn secondary" %>
@@ -58,7 +56,6 @@
 <%= form_with url: bulk_select_admin_carrier_professions_path, method: :post, local: true,
               html: { id: "bulk-form", "data-turbo": "false" } do %>
 
-  <!-- ✅ on propage l’onglet à la page bulk -->
   <%= hidden_field_tag :species, current_species %>
 
   <div class="table-wrap">
@@ -68,7 +65,6 @@
         <span>Tout sélectionner (cette page)</span>
       </label>
 
-      <!-- ⬇️ Menu d’actions -->
       <%= select_tag :bulk_action,
             options_for_select([
               ["— Choisir une action —", ""],
@@ -106,7 +102,9 @@
         <tbody>
           <% @carrier_professions.each do |cp| %>
             <% carrier = cp.carrier_referential.carrier.name %>
-            <% m = cp.profession_mappings.first %>
+
+            <% m = cp.profession_mappings.find { |pm| pm.status != "rejected" && pm.profession.present? } %>
+
             <% status = (m&.status || "unmapped").to_s %>
             <% badge_class =
                 case status
@@ -124,7 +122,7 @@
               <td><strong><%= cp.external_label %></strong></td>
               <td>
                 <% if m&.profession %>
-                  <strong><%= m.profession.name %></strong>
+                  <strong><%= clean_encoding(m.profession.name) %></strong>
                 <% else %>
                   <span class="muted">(pas de mapping)</span>
                 <% end %>
@@ -142,7 +140,6 @@
               </td>
               <td>
                 <% if m %>
-                  <!-- ✅ on garde l’onglet quand on va “Changer” -->
                   <%= link_to "Changer",
                               edit_admin_profession_mapping_path(m, species: current_species),
                               class: "btn-link" %>
