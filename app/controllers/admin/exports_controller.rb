@@ -86,21 +86,22 @@ class Admin::ExportsController < ApplicationController
   end
 
   # === 3) EXPORT PHP : /admin/professions_php  (+ ?include_aliases=1)
+  # -> n’inclut que les professions / alias rattachés à AU MOINS 1 mapping NON "rejected"
   def professions_php
     map = {}
 
-    # a) noms officiels
+    # a) noms officiels (on ne touche pas aux accents)
     Profession
       .joins(:profession_mappings)
       .where.not(profession_mappings: { status: "rejected" })
       .distinct
       .order(:name)
       .find_each do |p|
-      clean = fix_mojibake(p.name.to_s)
-      map[clean] = clean
+      name = p.name.to_s
+      map[name] = name
     end
 
-    # b) alias
+    # b) alias (pareil, on sort tel quel)
     include_aliases = ActiveModel::Type::Boolean.new.cast(params[:include_aliases]) && defined?(ProfessionSynonym)
     alias_count = 0
 
@@ -119,15 +120,14 @@ class Admin::ExportsController < ApplicationController
 
         alias_label =
           if row.respond_to?(:alias) && row.alias.present?
-            fix_mojibake(row.alias)
+            row.alias.to_s
           else
-            fix_mojibake(row.alias_norm)
+            row.alias_norm.to_s
           end
-
-        canonical = fix_mojibake(row.canonical_name)
 
         next if alias_label.blank?
 
+        canonical = row.canonical_name.to_s
         map[alias_label] = canonical
         alias_count += 1
       end
@@ -144,8 +144,9 @@ class Admin::ExportsController < ApplicationController
     php << "\n"
     php << "\$professions = [\n"
 
+    # on écrit tel quel, juste on échappe les quotes
     map.sort_by { |k, _| k.downcase }.each do |k, v|
-      php << "  #{php_quote(fix_mojibake(k))} => #{php_quote(fix_mojibake(v))},\n"
+      php << "  #{php_quote(k)} => #{php_quote(v)},\n"
     end
 
     php << "];\n"
@@ -159,33 +160,7 @@ class Admin::ExportsController < ApplicationController
 
   private
 
-  # essaie de réparer les chaînes doublement mal lues (Ã… Â…)
-  def fix_mojibake(str)
-    return "" if str.nil?
-    s = str.to_s.dup
-
-    # on compte les caractères "suspects"
-    suspicious = ["Ã", "Â", "¢", "", ""]
-    needs_fix  = suspicious.any? { |c| s.include?(c) }
-
-    return s unless needs_fix
-
-    # on tente jusqu'à 5 passes max
-    5.times do
-      break unless suspicious.any? { |c| s.include?(c) }
-      s = s.force_encoding("ISO-8859-1").encode(
-        "UTF-8",
-        invalid: :replace,
-        undef:   :replace,
-        replace: ""
-      )
-    end
-
-    s
-  rescue
-    str.to_s
-  end
-
+  # CSV avec BOM pour que Excel affiche bien les accents
   def csv_with_bom(enum)
     Enumerator.new do |y|
       y << "\uFEFF"
@@ -195,6 +170,7 @@ class Admin::ExportsController < ApplicationController
     end
   end
 
+  # Échapper une chaîne pour l’insérer dans du code PHP entre quotes simples
   def php_quote(str)
     s = str.to_s.gsub("\\", "\\\\").gsub("'", "\\'")
     "'#{s}'"
