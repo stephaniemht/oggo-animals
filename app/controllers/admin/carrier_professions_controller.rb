@@ -290,43 +290,56 @@ class Admin::CarrierProfessionsController < ApplicationController
                 notice: msg
   end
 
-    private
+  private
 
-  # pour chaque carrier_profession qu’on affiche,
-  # si aucun mapping n’existe, on crée la profession + le mapping
   def ensure_referential_for(carrier_professions)
     carrier_professions.each do |cp|
-      next if cp.profession_mappings.first.present?
+      mapping = cp.profession_mappings.first
+
+      # 👉 on considère qu'il faut agir si :
+      # - pas de mapping
+      # - OU mapping rejeté
+      needs_mapping = mapping.nil? || mapping.status == "rejected"
+      next unless needs_mapping
 
       label = cp.external_label.to_s.strip
       next if label.blank?
 
-      # on déduit l'espèce depuis le cp (tu la filtres déjà dans l’index)
-      species = cp.species
+      # on essaie de deviner l’espèce
+      species = cp.respond_to?(:species) ? cp.species : nil
+      species ||= @species # si on est dans l’onglet "dog" ou "cat"
 
-      # on normalise le nom pour éviter les doublons
       norm = LabelNormalizer.call(label)
 
-      # on cherche d’abord si on a déjà une profession pour ce nom et cette espèce
-      prof = Profession.where(animal_species: species)
-                       .where("name_norm = ?", norm)
-                       .first
+      # on essaie de retrouver une profession existante qui correspond déjà
+      prof =
+        Profession.where(animal_species: species).where(name_norm: norm).first ||
+        Profession.find_by(name: label)
 
       # sinon on la crée
       unless prof
         prof = Profession.create!(
-          name:          label,
-          name_norm:     norm,
+          name:           label,
+          name_norm:      norm,
           animal_species: species
         )
       end
 
-      # puis on crée le mapping
-      cp.profession_mappings.create!(
-        profession: prof,
-        status:     "approved",
-        confidence: 1.0
-      )
+      if mapping
+        # il existait mais il était rejeté → on le remet propre
+        mapping.update!(
+          profession: prof,
+          status:     "approved",
+          confidence: 1.0
+        )
+      else
+        # il n’y en avait pas → on le crée
+        cp.profession_mappings.create!(
+          profession: prof,
+          status:     "approved",
+          confidence: 1.0
+        )
+      end
     end
   end
 end
