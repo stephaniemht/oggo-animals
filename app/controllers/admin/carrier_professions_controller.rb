@@ -78,9 +78,6 @@ class Admin::CarrierProfessionsController < ApplicationController
     @carrier_professions = rel.order("carrier_professions.id ASC").limit(2000)
     @carriers = Carrier.order(:name)
 
-    ensure_referential_for(@carrier_professions)
-
-
     profession_ids = @carrier_professions.map { |cp| cp.profession_mappings.first&.profession_id }.compact.uniq
     @carriers_count_by_prof =
       if profession_ids.any?
