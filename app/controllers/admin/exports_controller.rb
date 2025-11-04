@@ -42,8 +42,6 @@ class Admin::ExportsController < ApplicationController
   end
 
   # === 2) EXPORT CSV “MATRIX” : /admin/professions_matrix.csv
-  # Col A: Référentiel OGGO ; Colonnes suivantes: 1 par compagnie, avec le libellé mappé
-  # -> n’inclut que les professions ayant au moins 1 mapping NON "rejected"
   def professions_matrix
     carriers = Carrier.order(:name).to_a
     header = ["Référentiel OGGO"] + carriers.map(&:name)
@@ -61,7 +59,7 @@ class Admin::ExportsController < ApplicationController
         mappings = ProfessionMapping
           .joins(carrier_profession: { carrier_referential: :carrier })
           .where(profession_id: p.id)
-          .where.not(status: "rejected") # ⬅️ important
+          .where.not(status: "rejected")
           .select(
             "profession_mappings.id",
             "carriers.id AS carrier_id",
@@ -88,7 +86,6 @@ class Admin::ExportsController < ApplicationController
   end
 
   # === 3) EXPORT PHP : /admin/professions_php  (+ ?include_aliases=1)
-  # -> n’inclut que les professions / alias rattachés à AU MOINS 1 mapping NON "rejected"
   def professions_php
     map = {}
 
@@ -162,16 +159,15 @@ class Admin::ExportsController < ApplicationController
 
   private
 
-  # on essaie de "déplier" les chaînes du type "ÃÂ©" -> "é"
+  # essaie de réparer les chaînes doublement mal lues (Ã… Â…)
   def fix_mojibake(str)
     return "" if str.nil?
-
     s = str.to_s.dup
 
-    # on essaie plusieurs passes, parce que certaines chaînes sont doublement encodées
     2.times do
       break unless s.include?("Ã") || s.include?("Â")
-      s = s.encode("ISO-8859-1", invalid: :replace, undef: :replace, replace: "").force_encoding("UTF-8")
+      # ⚠️ d'abord on dit "ce texte était en ISO-8859-1"
+      s = s.force_encoding("ISO-8859-1").encode("UTF-8", invalid: :replace, undef: :replace, replace: "")
     end
 
     s
