@@ -99,10 +99,11 @@ class Admin::ExportsController < ApplicationController
       .distinct
       .order(:name)
       .find_each do |p|
-      map[p.name.to_s] = p.name.to_s
+      clean_name = normalize_utf8(p.name.to_s)
+      map[clean_name] = clean_name
     end
 
-    # b) alias (si demandé) : seulement ceux dont la profession a un mapping non-rejected
+    # b) alias (si demandé)
     include_aliases = ActiveModel::Type::Boolean.new.cast(params[:include_aliases]) && defined?(ProfessionSynonym)
     alias_count = 0
 
@@ -111,31 +112,35 @@ class Admin::ExportsController < ApplicationController
         .joins(profession: :profession_mappings)
         .where.not(profession_mappings: { status: "rejected" })
         .select(
-          "profession_synonyms.id",                 # nécessaire pour find_each
+          "profession_synonyms.id",
           "profession_synonyms.alias",
           "profession_synonyms.alias_norm",
           "professions.name AS canonical_name"
         )
         .distinct
         .find_each do |row|
-          alias_label =
-            if row.respond_to?(:alias) && row.alias.present?
-              row.alias
-            else
-              row.alias_norm
-            end
-          next if alias_label.blank?
-          map[alias_label.to_s] = row.canonical_name.to_s
-          alias_count += 1
-        end
+
+        # on nettoie l’alias ET le nom canonique
+        alias_label =
+          if row.respond_to?(:alias) && row.alias.present?
+            normalize_utf8(row.alias)
+          else
+            normalize_utf8(row.alias_norm)
+          end
+
+        canonical = normalize_utf8(row.canonical_name)
+
+        next if alias_label.blank?
+
+        map[alias_label] = canonical
+        alias_count += 1
+      end
     end
 
-    # Infos pour le commentaire
-    exported_at = Time.current.strftime("%Y-%m-%d %H:%M:%S %Z")
-    mode = include_aliases ? "avec alias" : "sans alias"
+    exported_at   = Time.current.strftime("%Y-%m-%d %H:%M:%S %Z")
+    mode          = include_aliases ? "avec alias" : "sans alias"
     total_entries = map.size
 
-    # générer le code PHP avec un commentaire en en-tête
     php = +"<?php\n"
     php << "// Export OGGO — #{mode}\n"
     php << "// Généré le : #{exported_at}\n"
@@ -143,9 +148,11 @@ class Admin::ExportsController < ApplicationController
     php << "\n"
     php << "\$professions = [\n"
 
+    # on trie les clés comme avant
     map.sort_by { |k, _| k.downcase }.each do |k, v|
-      php << "  #{php_quote(k)} => #{php_quote(v)},\n"
+      php << "  #{php_quote(normalize_utf8(k))} => #{php_quote(normalize_utf8(v))},\n"
     end
+
     php << "];\n"
     php << "return \$professions;\n"
 
@@ -155,20 +162,27 @@ class Admin::ExportsController < ApplicationController
               disposition: "attachment"
   end
 
-
   private
 
-  # CSV avec BOM pour que Excel affiche bien les accents
+  # même idée que dans le rake
+  def normalize_utf8(str)
+    return "" if str.nil?
+
+    s = str.dup
+    s.force_encoding("ISO-8859-1").encode("UTF-8")
+  rescue Encoding::UndefinedConversionError, Encoding::InvalidByteSequenceError
+    str.to_s.encode("UTF-8", invalid: :replace, undef: :replace, replace: "")
+  end
+
   def csv_with_bom(enum)
     Enumerator.new do |y|
-      y << "\uFEFF" # BOM UTF-8
+      y << "\uFEFF"
       enum.each do |row|
         y << CSV.generate_line(row, col_sep: ";")
       end
     end
   end
 
-  # Échapper une chaîne pour l’insérer dans du code PHP entre quotes simples
   def php_quote(str)
     s = str.to_s.gsub("\\", "\\\\").gsub("'", "\\'")
     "'#{s}'"
