@@ -1,9 +1,16 @@
 <h1 class="cp-title">Référentiel OGGO</h1>
 
-<!-- 🔹 ONGlets Chiens / Chats -->
+<!-- 🔹 ONGlets Toutes / Chiens / Chats -->
 <div class="tabs" style="display:flex; gap:8px; margin: 8px 0 12px;">
   <% base_params = request.query_parameters.except(:page).symbolize_keys %>
-  <% active = ->(sp){ (params[:species].presence || "") == sp ? "background:#ede9fe; font-weight:600;" : "" } %>
+  <% current_species = params[:species].presence %>
+  <% active = ->(sp){ current_species == sp ? "background:#ede9fe; font-weight:600;" : "" } %>
+
+  <!-- toutes espèces = pas de param species -->
+  <%= link_to "🌍 Toutes espèces",
+      admin_professions_path(base_params.merge(species: nil, page: 1)),
+      class: "btn",
+      style: "padding:8px 12px; border-radius:12px; #{current_species.nil? ? 'background:#ede9fe; font-weight:600;' : ''}" %>
 
   <%= link_to "🐶 Chiens",
       admin_professions_path(base_params.merge(species: "dog", page: 1)),
@@ -23,7 +30,10 @@
                 data: { turbo: false },
                 html: { id: "filters-form" } do %>
 
-    <%= hidden_field_tag :species, @species if @species.present? %>
+    <%# on ne met le hidden species que si on est sur dog ou cat %>
+    <% if current_species.present? %>
+      <%= hidden_field_tag :species, current_species %>
+    <% end %>
 
     <div class="filters-row">
       <label>Recherche</label>
@@ -45,7 +55,7 @@
 
       <%= submit_tag "Rechercher", class: "btn" %>
 
-      <% if @q.present? || @company_span.present? || params[:per_page].present? || @species.present? %>
+      <% if @q.present? || @company_span.present? || params[:per_page].present? || current_species.present? %>
         <%= link_to "Réinitialiser", admin_professions_path, class: "btn secondary" %>
       <% end %>
     </div>
@@ -56,18 +66,16 @@
 
       <form id="export-form" action="<%= admin_professions_matrix_path(format: :csv) %>" method="get" data-turbo="false" style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
 
-        <!-- format -->
         <select name="export_kind" id="export-kind" class="sel">
           <option value="csv">CSV référentiel + compagnies</option>
           <option value="php">PHP (sans alias)</option>
           <option value="php_alias">PHP (avec alias)</option>
         </select>
 
-        <!-- espèce -->
         <select name="species" id="export-species" class="sel">
           <option value="">Toutes espèces</option>
-          <option value="dog" <%= "selected" if @species == "dog" %>>Chiens</option>
-          <option value="cat" <%= "selected" if @species == "cat" %>>Chats</option>
+          <option value="dog" <%= "selected" if current_species == "dog" %>>Chiens</option>
+          <option value="cat" <%= "selected" if current_species == "cat" %>>Chats</option>
         </select>
 
         <button type="submit" class="btn secondary">Télécharger</button>
@@ -79,20 +87,16 @@
           const kindSel = document.getElementById("export-kind");
 
           form.addEventListener("submit", function(e) {
-            // on choisit la bonne route selon le format
             const kind = kindSel.value;
 
             if (kind === "csv") {
               form.action = "<%= admin_professions_matrix_path(format: :csv) %>";
             } else if (kind === "php") {
               form.action = "<%= admin_professions_php_path %>";
-              // pas d'alias
-              // on enlève include_aliases si jamais
               const old = form.querySelector('input[name="include_aliases"]');
               if (old) old.remove();
             } else if (kind === "php_alias") {
               form.action = "<%= admin_professions_php_path %>";
-              // on ajoute include_aliases=1
               let inp = form.querySelector('input[name="include_aliases"]');
               if (!inp) {
                 inp = document.createElement("input");
@@ -108,9 +112,6 @@
         })();
       </script>
     </div>
-    <!-- ====== /EXPORTS ====== -->
-
-
   <% end %>
 </div>
 
