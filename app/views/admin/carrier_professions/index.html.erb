@@ -130,14 +130,17 @@
                 <%= check_box_tag "ids[]", cp.id, false, class: "row-check" %>
               </td>
               <td><span class="pill"><%= carrier %></span></td>
-              <td><strong><%= cp.external_label %></strong></td>
+
+              <!-- ✅ nettoyage encodage -->
+              <td><strong><%= fix_encoding(cp.external_label) %></strong></td>
               <td>
                 <% if m&.profession %>
-                  <strong><%= clean_encoding(m.profession.name) %></strong>
+                  <strong><%= fix_encoding(m.profession.name) %></strong>
                 <% else %>
                   <span class="muted">(pas de mapping)</span>
                 <% end %>
               </td>
+
               <td class="ta-right">
                 <% if m&.profession_id %>
                   <% nb = @carriers_count_by_prof[m.profession_id].to_i %>
@@ -146,9 +149,11 @@
                   <span class="muted">-</span>
                 <% end %>
               </td>
+
               <td>
                 <span class="badge <%= badge_class %>"><%= status %></span>
               </td>
+
               <td>
                 <% if m %>
                   <%= link_to "Changer",
