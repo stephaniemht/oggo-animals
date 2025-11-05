@@ -2,8 +2,14 @@
 
 <!-- 🔹 ONGlets espèces -->
 <div style="display:flex; gap:8px; margin: 8px 0 12px;">
-  <% current_species = params[:species].presence_in(%w[dog cat]) || "dog" %>
   <% base_params = request.query_parameters.except(:page).symbolize_keys %>
+  <% current_species = params[:species].presence_in(%w[dog cat]) %>
+
+  <!-- toutes espèces = pas de param -->
+  <%= link_to "🌍 Toutes espèces",
+      admin_carrier_professions_path(base_params.merge(species: nil, page: 1)),
+      class: "btn",
+      style: "padding:8px 12px; border-radius:12px; #{current_species.nil? ? 'background:#ede9fe; font-weight:600;' : ''}" %>
 
   <%= link_to "🐶 Chiens",
       admin_carrier_professions_path(base_params.merge(species: "dog", page: 1)),
@@ -21,7 +27,10 @@
   <%= form_with url: admin_carrier_professions_path, method: :get, local: true,
                 html: { id: "filters-form" } do %>
 
-    <%= hidden_field_tag :species, current_species %>
+    <%# on ne propage l’espèce que si on est vraiment sur dog/cat %>
+    <% if current_species.present? %>
+      <%= hidden_field_tag :species, current_species %>
+    <% end %>
 
     <div class="filters-row">
       <label>Recherche</label>
@@ -43,9 +52,9 @@
       </label>
 
       <%= submit_tag "Filtrer", class: "btn" %>
-      <% if params[:carrier_id].present? || @q.present? || @status != "all" || @only_once %>
+      <% if params[:carrier_id].present? || @q.present? || @status != "all" || @only_once || current_species.present? %>
         <%= link_to "Réinitialiser",
-                    admin_carrier_professions_path(species: current_species),
+                    admin_carrier_professions_path,
                     class: "btn secondary" %>
       <% end %>
     </div>
@@ -56,7 +65,10 @@
 <%= form_with url: bulk_select_admin_carrier_professions_path, method: :post, local: true,
               html: { id: "bulk-form", "data-turbo": "false" } do %>
 
-  <%= hidden_field_tag :species, current_species %>
+  <%# pareil, on ne renvoie species que si on est sur chien/chat %>
+  <% if current_species.present? %>
+    <%= hidden_field_tag :species, current_species %>
+  <% end %>
 
   <div class="table-wrap">
     <div class="toolbar">
@@ -102,7 +114,6 @@
         <tbody>
           <% @carrier_professions.each do |cp| %>
             <% carrier = cp.carrier_referential.carrier.name %>
-
             <% m = cp.profession_mappings.find { |pm| pm.status != "rejected" && pm.profession.present? } %>
 
             <% status = (m&.status || "unmapped").to_s %>
