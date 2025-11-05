@@ -1,23 +1,12 @@
+# lib/tasks/exports.rake
 namespace :exports do
   desc "Export des mappings en CSV et PHP. Dossier: tmp/exports/<timestamp>"
   task all: :environment do
-    # petite fonction pour réparer les chaînes mal encodées
-    def normalize_utf8(str)
-      return "" if str.nil?
-
-      s = str.dup
-      # on réinterprète comme si ça venait d'ISO-8859-1 puis on passe en UTF-8
-      s.force_encoding("ISO-8859-1").encode("UTF-8")
-    rescue Encoding::UndefinedConversionError, Encoding::InvalidByteSequenceError
-      # au cas où c’est vraiment tordu, on fait au moins un UTF-8 propre
-      str.to_s.encode("UTF-8", invalid: :replace, undef: :replace, replace: "")
-    end
-
     ts = Time.now.strftime("%Y%m%d-%H%M%S")
     out_dir = Rails.root.join("tmp/exports", ts)
     FileUtils.mkdir_p(out_dir)
 
-    # 1) CSV global
+    # 1) CSV global (toutes espèces)
     csv_path = out_dir.join("mappings.csv")
     require "csv"
     CSV.open(csv_path, "w") do |csv|
@@ -25,68 +14,67 @@ namespace :exports do
       ProfessionMapping
         .includes(:profession, carrier_profession: { carrier_referential: :carrier })
         .find_each do |m|
-          cp        = m.carrier_profession
-          carrier   = normalize_utf8(cp.carrier_referential.carrier.name)
-          code      = normalize_utf8(cp.external_code)
-          label     = normalize_utf8(cp.external_label)
-          oggo_name = m.profession ? normalize_utf8(m.profession.name) : ""
-
+          cp = m.carrier_profession
           csv << [
-            carrier,
-            code,
-            label,
-            oggo_name,
+            cp.carrier_referential.carrier.name,
+            cp.external_code,
+            cp.external_label,
+            m.profession&.name,
             m.status,
             m.confidence
           ]
         end
     end
 
-    # 2) PHP (array) : $mapping[oggo_norm][CARRIER] = ['code' => ..., 'label' => ...]
-    php_path = out_dir.join("mapping.php")
-    File.open(php_path, "w") do |f|
-      f.puts "<?php"
-      f.puts "$mapping = ["
-
+    # petite méthode locale pour éviter de répéter
+    def build_php_file(path, species: nil)
       data = {}
-      ProfessionMapping
-        .includes(:profession, carrier_profession: { carrier_referential: :carrier })
-        .where(status: "approved")
-        .find_each do |m|
-          next unless m.profession
+      rel = ProfessionMapping
+              .includes(:profession, carrier_profession: { carrier_referential: :carrier })
+              .where(status: "approved")
 
-          # on nettoie le nom OGGO AVANT de le normaliser
-          cleaned_prof_name = normalize_utf8(m.profession.name)
-          oggo_norm         = LabelNormalizer.call(cleaned_prof_name)
+      rel = rel.where(professions: { animal_species: species }) if species.present?
 
-          carrier_name = normalize_utf8(m.carrier_profession.carrier_referential.carrier.name).upcase
-
-          data[oggo_norm] ||= {}
-          data[oggo_norm][carrier_name] = {
-            code:  normalize_utf8(m.carrier_profession.external_code),
-            label: normalize_utf8(m.carrier_profession.external_label)
-          }
-        end
-
-      # écriture PHP
-      data.sort.each do |oggo_norm, carriers|
-        # on échappe les apostrophes dans la clé PHP
-        oggo_key = oggo_norm.gsub("'", "\\\\'")
-        f.puts "  '#{oggo_key}' => ["
-        carriers.sort.each do |carrier, h|
-          code  = (h[:code]  || "").gsub("'", "\\\\'")
-          label = (h[:label] || "").gsub("'", "\\\\'")
-          f.puts "    '#{carrier}' => ['code' => '#{code}', 'label' => '#{label}'],"
-        end
-        f.puts "  ],"
+      rel.find_each do |m|
+        next unless m.profession
+        oggo_norm = LabelNormalizer.call(m.profession.name)
+        carrier   = m.carrier_profession.carrier_referential.carrier.name.upcase
+        data[oggo_norm] ||= {}
+        data[oggo_norm][carrier] = {
+          code:  m.carrier_profession.external_code,
+          label: m.carrier_profession.external_label
+        }
       end
 
-      f.puts "];"
-      f.puts "?>"
+      File.open(path, "w") do |f|
+        f.puts "<?php"
+        f.puts "// export OGGO #{species ? "(#{species})" : "(toutes espèces)"}"
+        f.puts "$mapping = ["
+        data.sort.each do |oggo_norm, carriers|
+          f.puts "  '#{oggo_norm.gsub("'", "\\\\'")}' => ["
+          carriers.sort.each do |carrier, h|
+            code  = (h[:code]  || "").gsub("'", "\\\\'")
+            label = (h[:label] || "").gsub("'", "\\\\'")
+            f.puts "    '#{carrier}' => ['code' => '#{code}', 'label' => '#{label}'],"
+          end
+          f.puts "  ],"
+        end
+        f.puts "];"
+        f.puts "?>"
+      end
     end
+
+    # 2) PHP global
+    build_php_file(out_dir.join("mapping.php"))
+    # 3) PHP chiens
+    build_php_file(out_dir.join("mapping-dog.php"), species: "dog")
+    # 4) PHP chats
+    build_php_file(out_dir.join("mapping-cat.php"), species: "cat")
 
     puts "Exports écrits dans: #{out_dir}"
     puts "- CSV : #{csv_path}"
-    puts "- PHP : #{php_path}"
+    puts "- PHP : #{out_dir.join("mapping.php")}"
+    puts "- PHP chiens : #{out_dir.join("mapping-dog.php")}"
+    puts "- PHP chats : #{out_dir.join("mapping-cat.php")}"
   end
 end

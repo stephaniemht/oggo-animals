@@ -50,22 +50,69 @@
       <% end %>
     </div>
 
-    <div class="filters-row" style="margin-top:10px;">
-      <%= link_to "⬇️ Export CSV Référentiel + Compagnies",
+    <!-- ====== EXPORTS ====== -->
+    <div class="filters-row" style="margin-top:10px; gap:6px; flex-wrap:wrap;">
+      <span class="muted" style="font-weight:600;">Exports :</span>
+
+      <!-- CSV -->
+      <span class="muted">CSV</span>
+      <%= link_to "toutes espèces",
                   admin_professions_matrix_path(format: :csv),
-                  class: "btn secondary",
+                  class: "btn-link",
+                  data: { turbo: false } %>
+      |
+      <%= link_to "chiens",
+                  admin_professions_matrix_path(format: :csv, species: "dog"),
+                  class: "btn-link",
+                  data: { turbo: false } %>
+      |
+      <%= link_to "chats",
+                  admin_professions_matrix_path(format: :csv, species: "cat"),
+                  class: "btn-link",
                   data: { turbo: false } %>
 
-      <%= link_to "⬇️ Export PHP (avec alias)",
-                  admin_professions_php_path(include_aliases: 1),
-                  class: "btn secondary",
-                  data: { turbo: false } %>
+      <!-- séparateur visuel -->
+      <span class="muted" style="opacity:.4;">|</span>
 
-      <%= link_to "⬇️ Export PHP Référentiel",
+      <!-- PHP sans alias -->
+      <span class="muted">PHP</span>
+      <%= link_to "toutes",
                   admin_professions_php_path,
-                  class: "btn secondary",
+                  class: "btn-link",
+                  data: { turbo: false } %>
+      |
+      <%= link_to "chiens",
+                  admin_professions_php_path(species: "dog"),
+                  class: "btn-link",
+                  data: { turbo: false } %>
+      |
+      <%= link_to "chats",
+                  admin_professions_php_path(species: "cat"),
+                  class: "btn-link",
+                  data: { turbo: false } %>
+
+      <!-- séparateur visuel -->
+      <span class="muted" style="opacity:.4;">|</span>
+
+      <!-- PHP avec alias -->
+      <span class="muted">PHP + alias</span>
+      <%= link_to "toutes",
+                  admin_professions_php_path(include_aliases: 1),
+                  class: "btn-link",
+                  data: { turbo: false } %>
+      |
+      <%= link_to "chiens",
+                  admin_professions_php_path(species: "dog", include_aliases: 1),
+                  class: "btn-link",
+                  data: { turbo: false } %>
+      |
+      <%= link_to "chats",
+                  admin_professions_php_path(species: "cat", include_aliases: 1),
+                  class: "btn-link",
                   data: { turbo: false } %>
     </div>
+    <!-- ====== /EXPORTS ====== -->
+
   <% end %>
 </div>
 
@@ -120,7 +167,6 @@
     </table>
   </div>
 </div>
-
 
 <% if @total_pages.to_i > 1 %>
   <% total_pages_sane = [@total_pages.to_i, 1].max %>

@@ -2,10 +2,7 @@
 require "csv"
 
 class Admin::ExportsController < ApplicationController
-  # si tu veux limiter l'accès: before_action :authenticate_user!
-
   # === 1) EXPORT JSON : /admin/professions_export.json
-  # -> n’inclut que les professions ayant au moins 1 mapping NON "rejected"
   def professions
     rel = Profession
             .joins(:profession_mappings)
@@ -42,20 +39,24 @@ class Admin::ExportsController < ApplicationController
   end
 
   # === 2) EXPORT CSV “MATRIX” : /admin/professions_matrix.csv
+  # on ajoute species=dog|cat|... pour filtrer aussi ici
   def professions_matrix
+    species = params[:species].presence_in(%w[dog cat])
+
     carriers = Carrier.order(:name).to_a
     header = ["Référentiel OGGO"] + carriers.map(&:name)
 
     rows_enum = Enumerator.new do |y|
       y << header
 
-      Profession
-        .joins(:profession_mappings)
-        .where.not(profession_mappings: { status: "rejected" })
-        .distinct
-        .order(:name)
-        .find_each do |p|
+      rel = Profession
+              .joins(:profession_mappings)
+              .where.not(profession_mappings: { status: "rejected" })
+              .distinct
 
+      rel = rel.where(animal_species: species) if species.present?
+
+      rel.order(:name).find_each do |p|
         mappings = ProfessionMapping
           .joins(carrier_profession: { carrier_referential: :carrier })
           .where(profession_id: p.id)
@@ -85,49 +86,53 @@ class Admin::ExportsController < ApplicationController
     self.response_body = csv_with_bom(rows_enum)
   end
 
-  # === 3) EXPORT PHP : /admin/professions_php  (+ ?include_aliases=1)
-  # -> n’inclut que les professions / alias rattachés à AU MOINS 1 mapping NON "rejected"
+  # === 3) EXPORT PHP : /admin/professions_php?species=dog&include_aliases=1
   def professions_php
-    map = {}
+    species        = params[:species].presence_in(%w[dog cat])
+    include_aliases = ActiveModel::Type::Boolean.new.cast(params[:include_aliases]) && defined?(ProfessionSynonym)
+    map            = {}
 
-    # a) noms officiels (on ne touche pas aux accents)
-    Profession
+    # a) noms officiels
+    prof_rel = Profession
       .joins(:profession_mappings)
       .where.not(profession_mappings: { status: "rejected" })
       .distinct
-      .order(:name)
-      .find_each do |p|
-      name = p.name.to_s
-      map[name] = name
+
+    prof_rel = prof_rel.where(animal_species: species) if species.present?
+
+    prof_rel.order(:name).find_each do |p|
+      clean = fix_mojibake(p.name.to_s)
+      map[clean] = clean
     end
 
-    # b) alias (pareil, on sort tel quel)
-    include_aliases = ActiveModel::Type::Boolean.new.cast(params[:include_aliases]) && defined?(ProfessionSynonym)
+    # b) alias
     alias_count = 0
-
     if include_aliases
-      ProfessionSynonym
+      syn_rel = ProfessionSynonym
         .joins(profession: :profession_mappings)
         .where.not(profession_mappings: { status: "rejected" })
         .select(
           "profession_synonyms.id",
           "profession_synonyms.alias",
           "profession_synonyms.alias_norm",
-          "professions.name AS canonical_name"
+          "professions.name AS canonical_name",
+          "professions.animal_species"
         )
         .distinct
-        .find_each do |row|
 
+      syn_rel = syn_rel.where(professions: { animal_species: species }) if species.present?
+
+      syn_rel.find_each do |row|
         alias_label =
           if row.respond_to?(:alias) && row.alias.present?
-            row.alias.to_s
+            fix_mojibake(row.alias)
           else
-            row.alias_norm.to_s
+            fix_mojibake(row.alias_norm)
           end
 
+        canonical = fix_mojibake(row.canonical_name)
         next if alias_label.blank?
 
-        canonical = row.canonical_name.to_s
         map[alias_label] = canonical
         alias_count += 1
       end
@@ -136,31 +141,54 @@ class Admin::ExportsController < ApplicationController
     exported_at   = Time.current.strftime("%Y-%m-%d %H:%M:%S %Z")
     mode          = include_aliases ? "avec alias" : "sans alias"
     total_entries = map.size
+    species_label = species.present? ? "Espèce : #{species}" : "Espèce : toutes"
 
     php = +"<?php\n"
     php << "// Export OGGO — #{mode}\n"
+    php << "// #{species_label}\n"
     php << "// Généré le : #{exported_at}\n"
     php << "// Entrées totales : #{total_entries}#{include_aliases ? " (dont ~#{alias_count} alias)" : ""}\n"
     php << "\n"
     php << "\$professions = [\n"
 
-    # on écrit tel quel, juste on échappe les quotes
     map.sort_by { |k, _| k.downcase }.each do |k, v|
-      php << "  #{php_quote(k)} => #{php_quote(v)},\n"
+      php << "  #{php_quote(fix_mojibake(k))} => #{php_quote(fix_mojibake(v))},\n"
     end
 
     php << "];\n"
     php << "return \$professions;\n"
 
     send_data php,
-              filename: "professions.php",
+              filename: "professions#{species ? "-#{species}" : ""}.php",
               type: "application/x-httpd-php; charset=utf-8",
               disposition: "attachment"
   end
 
   private
 
-  # CSV avec BOM pour que Excel affiche bien les accents
+  def fix_mojibake(str)
+    return "" if str.nil?
+    s = str.to_s.dup
+
+    suspicious = ["Ã", "Â", "¢", "", ""]
+    needs_fix  = suspicious.any? { |c| s.include?(c) }
+    return s unless needs_fix
+
+    5.times do
+      break unless suspicious.any? { |c| s.include?(c) }
+      s = s.force_encoding("ISO-8859-1").encode(
+        "UTF-8",
+        invalid: :replace,
+        undef:   :replace,
+        replace: ""
+      )
+    end
+
+    s
+  rescue
+    str.to_s
+  end
+
   def csv_with_bom(enum)
     Enumerator.new do |y|
       y << "\uFEFF"
@@ -170,7 +198,6 @@ class Admin::ExportsController < ApplicationController
     end
   end
 
-  # Échapper une chaîne pour l’insérer dans du code PHP entre quotes simples
   def php_quote(str)
     s = str.to_s.gsub("\\", "\\\\").gsub("'", "\\'")
     "'#{s}'"
