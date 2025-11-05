@@ -1,67 +1,67 @@
 <%# app/views/admin/merge_suggestions/_logs.html.erb %>
-<%# Requiert @logs et @targets_by_id %>
 
-<!-- app/views/admin/merge_suggestions/logs.html.erb -->
 <div class="logs-page">
-  <div class="filters-row">
-    <input type="text" id="log-search" class="inp" placeholder="Rechercher un libellé ou une date...">
+  <!-- on met TOUT dans logs-section pour que ton JS le voie -->
+  <div id="logs-section">
 
-    <label class="inp" style="display:inline-flex; align-items:center; gap:6px; margin-bottom:0;">
-      <input type="checkbox" id="select-all-logs">
-      <span>Tout cocher / décocher</span>
-    </label>
+    <div class="filters-row">
+      <input type="text" id="log-search" class="inp" placeholder="Rechercher un libellé ou une date...">
 
-    <button id="bulk-undo-btn" type="button" class="btn secondary">
-      Undo la sélection
-    </button>
-  </div>
+      <label class="inp" style="display:inline-flex; align-items:center; gap:6px; margin-bottom:0;">
+        <input type="checkbox" id="select-all-logs">
+        <span>Tout cocher / décocher</span>
+      </label>
 
-  <div class="table-wrap table-scroll" id="logs-section">
-    <% if @logs.blank? %>
-      <p class="muted" style="margin:0; padding:12px;">Aucun log pour le moment.</p>
-    <% else %>
-      <table class="cp-table">
-        <thead>
-          <tr>
-            <th></th>
-            <th>Quand</th>
-            <th>Métier fusionné (source)</th>
-            <th>Cible (métier final)</th>
-            <th>Statut</th>
-            <th>Action</th>
-          </tr>
-        </thead>
-        <tbody>
-          <% @logs.each do |log| %>
-            <% source_label = (log.source_attrs || {})["name"].presence || "##{log.source_id}" %>
-            <% target_label = (@targets_by_id || {})[log.target_id] || "##{log.target_id}" %>
+      <button id="bulk-undo-btn" type="button" class="btn secondary">
+        Undo la sélection
+      </button>
+    </div>
 
-            <tr class="data-row log-row">
-              <td><input type="checkbox" class="log-checkbox" value="<%= log.id %>"></td>
-              <td><%= l(log.performed_at || log.created_at, format: :short) rescue (log.performed_at || log.created_at) %></td>
-              <td class="log-source"><%= source_label %></td>
-              <td class="log-target"><%= target_label %></td>
-              <td>
-                <% if log.undone_at.present? %>
-                  <span class="badge rejected">Annulé le <%= l(log.undone_at, format: :short) %></span>
-                <% else %>
-                  <span class="badge approved">Actif</span>
-                <% end %>
-              </td>
-              <td>
-                <button type="button"
-                        class="btn secondary single-undo-btn"
-                        data-id="<%= log.id %>"
-                        <%= "disabled" if log.undone_at.present? %>>
-                  Undo
-                </button>
-              </td>
+    <div class="table-wrap table-scroll">
+      <% if @logs.blank? %>
+        <p class="muted" style="margin:0; padding:12px;">Aucun log pour le moment.</p>
+      <% else %>
+        <table class="cp-table">
+          <thead>
+            <tr>
+              <th></th>
+              <th>Quand</th>
+              <th>Métier fusionné (source)</th>
+              <th>Cible (métier final)</th>
+              <th>Statut</th>
+              <th>Action</th>
             </tr>
-          <% end %>
-        </tbody>
-      </table>
-    <% end %>
+          </thead>
+          <tbody>
+            <% @logs.each do |log| %>
+              <% source_label = (log.source_attrs || {})["name"].presence || "##{log.source_id}" %>
+              <% target_label = (@targets_by_id || {})[log.target_id] || "##{log.target_id}" %>
+
+              <tr class="data-row log-row">
+                <td><input type="checkbox" class="log-checkbox" value="<%= log.id %>"></td>
+                <td><%= l(log.performed_at || log.created_at, format: :short) rescue (log.performed_at || log.created_at) %></td>
+                <td class="log-source"><%= source_label %></td>
+                <td class="log-target"><%= target_label %></td>
+                <td>
+                  <% if log.undone_at.present? %>
+                    <span class="badge rejected">Annulé le <%= l(log.undone_at, format: :short) %></span>
+                  <% else %>
+                    <span class="badge approved">Actif</span>
+                  <% end %>
+                </td>
+                <td>
+                  <button type="button"
+                          class="btn secondary single-undo-btn"
+                          data-id="<%= log.id %>"
+                          <%= "disabled" if log.undone_at.present? %>>
+                    Undo
+                  </button>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      <% end %>
+    </div>
   </div>
 </div>
-
-
