@@ -28,7 +28,7 @@ class Admin::MergeSuggestionsController < ApplicationController
     offset     = (@page - 1) * @per_page
 
     # --------- LOGS ----------
-    @logs = ProfessionMergeLog.recent.limit(500)
+    @logs = ProfessionMergeLog.order(performed_at: :desc).limit(1000)
     target_ids = @logs.map(&:target_id).uniq
     @targets_by_id = Profession.where(id: target_ids).pluck(:id, :name).to_h
 
@@ -224,7 +224,7 @@ class Admin::MergeSuggestionsController < ApplicationController
         streams = []
 
         # 1) Logs
-        logs = ProfessionMergeLog.recent.limit(50)
+        logs = ProfessionMergeLog.order(performed_at: :desc).limit(50)
         targets_by_id = Profession.where(id: logs.map(&:target_id).uniq).pluck(:id, :name).to_h
         streams << turbo_stream.replace(
           "logs",
@@ -344,7 +344,7 @@ class Admin::MergeSuggestionsController < ApplicationController
     respond_to do |format|
       format.html { redirect_to admin_merge_suggestions_path, notice: "Undo OK" }
       format.turbo_stream do
-        logs = ProfessionMergeLog.recent.limit(50)
+        logs = ProfessionMergeLog.order(performed_at: :desc).limit(50)
         target_ids = logs.map(&:target_id).uniq
         targets_by_id = Profession.where(id: target_ids).pluck(:id, :name).to_h
 
@@ -394,7 +394,7 @@ class Admin::MergeSuggestionsController < ApplicationController
     respond_to do |format|
       format.html { redirect_to admin_merge_suggestions_path, notice: msg }
       format.turbo_stream do
-        logs = ProfessionMergeLog.recent.limit(50)
+        logs = ProfessionMergeLog.order(performed_at: :desc).limit(50)
         target_ids = logs.map(&:target_id).uniq
         targets_by_id = Profession.where(id: target_ids).pluck(:id, :name).to_h
 
