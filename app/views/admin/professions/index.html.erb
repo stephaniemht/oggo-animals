@@ -50,68 +50,66 @@
       <% end %>
     </div>
 
-    <!-- ====== EXPORTS ====== -->
-    <div class="filters-row" style="margin-top:10px; gap:6px; flex-wrap:wrap;">
+    <!-- ====== EXPORTS (avec sélecteurs) ====== -->
+    <div class="filters-row" style="margin-top:10px; gap:8px; flex-wrap:wrap; align-items:center;">
       <span class="muted" style="font-weight:600;">Exports :</span>
 
-      <!-- CSV -->
-      <span class="muted">CSV</span>
-      <%= link_to "toutes espèces",
-                  admin_professions_matrix_path(format: :csv),
-                  class: "btn-link",
-                  data: { turbo: false } %>
-      |
-      <%= link_to "chiens",
-                  admin_professions_matrix_path(format: :csv, species: "dog"),
-                  class: "btn-link",
-                  data: { turbo: false } %>
-      |
-      <%= link_to "chats",
-                  admin_professions_matrix_path(format: :csv, species: "cat"),
-                  class: "btn-link",
-                  data: { turbo: false } %>
+      <form id="export-form" action="<%= admin_professions_matrix_path(format: :csv) %>" method="get" data-turbo="false" style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
 
-      <!-- séparateur visuel -->
-      <span class="muted" style="opacity:.4;">|</span>
+        <!-- format -->
+        <select name="export_kind" id="export-kind" class="sel">
+          <option value="csv">CSV référentiel + compagnies</option>
+          <option value="php">PHP (sans alias)</option>
+          <option value="php_alias">PHP (avec alias)</option>
+        </select>
 
-      <!-- PHP sans alias -->
-      <span class="muted">PHP</span>
-      <%= link_to "toutes",
-                  admin_professions_php_path,
-                  class: "btn-link",
-                  data: { turbo: false } %>
-      |
-      <%= link_to "chiens",
-                  admin_professions_php_path(species: "dog"),
-                  class: "btn-link",
-                  data: { turbo: false } %>
-      |
-      <%= link_to "chats",
-                  admin_professions_php_path(species: "cat"),
-                  class: "btn-link",
-                  data: { turbo: false } %>
+        <!-- espèce -->
+        <select name="species" id="export-species" class="sel">
+          <option value="">Toutes espèces</option>
+          <option value="dog" <%= "selected" if @species == "dog" %>>Chiens</option>
+          <option value="cat" <%= "selected" if @species == "cat" %>>Chats</option>
+        </select>
 
-      <!-- séparateur visuel -->
-      <span class="muted" style="opacity:.4;">|</span>
+        <button type="submit" class="btn secondary">Télécharger</button>
+      </form>
 
-      <!-- PHP avec alias -->
-      <span class="muted">PHP + alias</span>
-      <%= link_to "toutes",
-                  admin_professions_php_path(include_aliases: 1),
-                  class: "btn-link",
-                  data: { turbo: false } %>
-      |
-      <%= link_to "chiens",
-                  admin_professions_php_path(species: "dog", include_aliases: 1),
-                  class: "btn-link",
-                  data: { turbo: false } %>
-      |
-      <%= link_to "chats",
-                  admin_professions_php_path(species: "cat", include_aliases: 1),
-                  class: "btn-link",
-                  data: { turbo: false } %>
+      <script>
+        (function() {
+          const form    = document.getElementById("export-form");
+          const kindSel = document.getElementById("export-kind");
+
+          form.addEventListener("submit", function(e) {
+            // on choisit la bonne route selon le format
+            const kind = kindSel.value;
+
+            if (kind === "csv") {
+              form.action = "<%= admin_professions_matrix_path(format: :csv) %>";
+            } else if (kind === "php") {
+              form.action = "<%= admin_professions_php_path %>";
+              // pas d'alias
+              // on enlève include_aliases si jamais
+              const old = form.querySelector('input[name="include_aliases"]');
+              if (old) old.remove();
+            } else if (kind === "php_alias") {
+              form.action = "<%= admin_professions_php_path %>";
+              // on ajoute include_aliases=1
+              let inp = form.querySelector('input[name="include_aliases"]');
+              if (!inp) {
+                inp = document.createElement("input");
+                inp.type = "hidden";
+                inp.name = "include_aliases";
+                inp.value = "1";
+                form.appendChild(inp);
+              } else {
+                inp.value = "1";
+              }
+            }
+          });
+        })();
+      </script>
     </div>
     <!-- ====== /EXPORTS ====== -->
+
 
   <% end %>
 </div>
