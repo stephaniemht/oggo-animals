@@ -1,7 +1,8 @@
+# app/controllers/admin/carrier_professions_controller.rb
 class Admin::CarrierProfessionsController < ApplicationController
   def index
     # redirection par défaut pour montrer aussi les pending
-    if params.permit!.to_h.slice("q","status","carrier_id","only_once","species").values.all?(&:blank?)
+    if params.permit!.to_h.slice("q", "status", "carrier_id", "only_once", "species").values.all?(&:blank?)
       redirect_to admin_carrier_professions_path(status: "all") and return
     end
 
@@ -25,14 +26,12 @@ class Admin::CarrierProfessionsController < ApplicationController
       )
     end
 
-    # filtre status (même logique qu'avant)
+    # filtre statut
     case @status
     when "all"
       rel = rel.where("profession_mappings.id IS NULL OR profession_mappings.status != ?", "rejected")
     when "unmapped"
-      rel = rel.where.not(
-        id: ProfessionMapping.select(:carrier_profession_id).distinct
-      )
+      rel = rel.where.not(id: ProfessionMapping.select(:carrier_profession_id).distinct)
     when "approved"
       approved_ids = ProfessionMapping.where(status: "approved").select(:carrier_profession_id)
       rejected_ids = ProfessionMapping.where(status: "rejected").select(:carrier_profession_id)
@@ -47,7 +46,7 @@ class Admin::CarrierProfessionsController < ApplicationController
       rel = rel.where("profession_mappings.id IS NULL OR profession_mappings.status != ?", "rejected")
     end
 
-    # filtre only_once (on garde ta logique telle quelle)
+    # filtre "présent dans une seule compagnie"
     if @only_once
       mapping_status_filter =
         case @status
@@ -65,13 +64,11 @@ class Admin::CarrierProfessionsController < ApplicationController
         .select(:profession_id)
 
       rel = rel.joins(:profession_mappings)
-              .where(profession_mappings: { profession_id: one_carrier_prof_ids })
+               .where(profession_mappings: { profession_id: one_carrier_prof_ids })
     end
 
-    # ⬅⬅⬅ NOUVEAU : filtre chien / chat direct
-    if @species
-      rel = rel.where(species: @species)
-    end
+    # filtre espèce (chien/chat)
+    rel = rel.where(species: @species) if @species
 
     rel = rel.distinct
 
@@ -91,7 +88,6 @@ class Admin::CarrierProfessionsController < ApplicationController
         {}
       end
   end
-
 
   def show
     @carrier_profession = CarrierProfession
@@ -172,7 +168,7 @@ class Admin::CarrierProfessionsController < ApplicationController
         roots  = tokens.map { |t| t.sub(/(es|e|s)\z/, "") }.select { |x| x.length >= 5 }.uniq
 
         if roots.any?
-          like_patterns = roots.map { |r| "%#{r}%" }
+          like_patterns  = roots.map { |r| "%#{r}%" }
           name_like_sql  = like_patterns.map { "professions.name_norm LIKE ?" }.join(" OR ")
 
           if defined?(ProfessionSynonym)
@@ -219,7 +215,7 @@ class Admin::CarrierProfessionsController < ApplicationController
     species = params[:species].presence_in(%w[dog cat]) || "dog"
     q       = params[:q].to_s.presence
 
-    # bloquer chien ↔ chat
+    # 🔐 Bloquer chien ↔ chat
     if target.animal_species.present? && target.animal_species != species
       redirect_to bulk_select_admin_carrier_professions_path(ids: ids, species: species, q: q),
                   alert: "Tu ne peux pas assigner un #{target.animal_species} depuis l’onglet #{species}."
@@ -228,12 +224,12 @@ class Admin::CarrierProfessionsController < ApplicationController
 
     cps = CarrierProfession.includes(:profession_mappings).where(id: ids)
 
-    updated = 0
-    unchanged = 0
+    updated         = 0
+    unchanged       = 0
     aliases_created = 0
     aliases_skipped = 0
     alias_conflicts = 0
-    cleaned = 0
+    cleaned         = 0
 
     ActiveRecord::Base.transaction do
       cps.each do |cp|
@@ -250,6 +246,7 @@ class Admin::CarrierProfessionsController < ApplicationController
           updated += 1
         end
 
+        # Gestion des alias
         if defined?(ProfessionSynonym)
           alias_norm = LabelNormalizer.call(cp.external_label)
           syn = ProfessionSynonym.find_by(alias_norm: alias_norm)
@@ -266,11 +263,17 @@ class Admin::CarrierProfessionsController < ApplicationController
           end
         end
 
+        # 💡 CHANGEMENT IMPORTANT :
+        # on fusionne plutôt que de détruire directement
         if old_prof && old_prof.id != target.id &&
            ProfessionMapping.where(profession_id: old_prof.id).none?
-          ProfessionSynonym.where(profession_id: old_prof.id)
-                           .update_all(profession_id: target.id) if defined?(ProfessionSynonym)
-          old_prof.destroy!
+          if defined?(Professions::MergeService)
+            Professions::MergeService.new(source: old_prof, target: target).call
+          else
+            ProfessionSynonym.where(profession_id: old_prof.id)
+                             .update_all(profession_id: target.id) if defined?(ProfessionSynonym)
+            old_prof.destroy!
+          end
           cleaned += 1
         end
       end
@@ -285,58 +288,5 @@ class Admin::CarrierProfessionsController < ApplicationController
 
     redirect_to admin_carrier_professions_path(status: "all", species: species),
                 notice: msg
-  end
-
-  private
-
-  def ensure_referential_for(carrier_professions)
-    carrier_professions.each do |cp|
-      mapping = cp.profession_mappings.first
-
-      # 👉 on considère qu'il faut agir si :
-      # - pas de mapping
-      # - OU mapping rejeté
-      needs_mapping = mapping.nil? || mapping.status == "rejected"
-      next unless needs_mapping
-
-      label = cp.external_label.to_s.strip
-      next if label.blank?
-
-      # on essaie de deviner l’espèce
-      species = cp.respond_to?(:species) ? cp.species : nil
-      species ||= @species # si on est dans l’onglet "dog" ou "cat"
-
-      norm = LabelNormalizer.call(label)
-
-      # on essaie de retrouver une profession existante qui correspond déjà
-      prof =
-        Profession.where(animal_species: species).where(name_norm: norm).first ||
-        Profession.find_by(name: label)
-
-      # sinon on la crée
-      unless prof
-        prof = Profession.create!(
-          name:           label,
-          name_norm:      norm,
-          animal_species: species
-        )
-      end
-
-      if mapping
-        # il existait mais il était rejeté → on le remet propre
-        mapping.update!(
-          profession: prof,
-          status:     "approved",
-          confidence: 1.0
-        )
-      else
-        # il n’y en avait pas → on le crée
-        cp.profession_mappings.create!(
-          profession: prof,
-          status:     "approved",
-          confidence: 1.0
-        )
-      end
-    end
   end
 end
