@@ -78,18 +78,21 @@ class Admin::CarrierProfessionsController < ApplicationController
     @carriers = Carrier.order(:name)
 
     # pour la colonne "nb compagnies"
-    profession_ids = @carrier_professions.map { |cp| cp.profession_mappings.first&.profession_id }.compact.uniq
-    @carriers_count_by_prof =
-      if profession_ids.any?
-        ProfessionMapping
-          .joins(carrier_profession: { carrier_referential: :carrier })
-          .where(profession_id: profession_ids)
-          .where.not(status: "rejected")
-          .group(:profession_id)
-          .count("DISTINCT carriers.id")
-      else
-        {}
-      end
+  profession_ids = @carrier_professions.map { |cp|
+    cp.profession_mappings.find { |pm| pm.status != "rejected" && pm.profession_id.present? }&.profession_id
+  }.compact.uniq
+
+  @carriers_count_by_prof =
+    if profession_ids.any?
+      ProfessionMapping
+        .joins(carrier_profession: { carrier_referential: :carrier })
+        .where(profession_id: profession_ids)
+        .where.not(status: "rejected")
+        .group(:profession_id)
+        .count("DISTINCT carriers.id")
+    else
+      {}
+    end
   end
 
   def show
