@@ -6,7 +6,6 @@
   <% current_species = params[:species].presence %>
   <% active = ->(sp){ current_species == sp ? "background:#ede9fe; font-weight:600;" : "" } %>
 
-  <!-- toutes espèces = pas de param species -->
   <%= link_to "🌍 Toutes espèces",
       admin_professions_path(base_params.merge(species: nil, page: 1)),
       class: "btn",
@@ -30,7 +29,6 @@
                 data: { turbo: false },
                 html: { id: "filters-form" } do %>
 
-    <%# on ne met le hidden species que si on est sur dog ou cat %>
     <% if current_species.present? %>
       <%= hidden_field_tag :species, current_species %>
     <% end %>
@@ -60,121 +58,66 @@
       <% end %>
     </div>
 
-    <!-- ====== EXPORTS (avec sélecteurs) ====== -->
-    <div class="filters-row" style="margin-top:10px; gap:8px; flex-wrap:wrap; align-items:center;">
-      <span class="muted" style="font-weight:600;">Exports :</span>
-
-      <form id="export-form" action="<%= admin_professions_matrix_path(format: :csv) %>" method="get" data-turbo="false" style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
-
-        <select name="export_kind" id="export-kind" class="sel">
-          <option value="csv">CSV référentiel + compagnies</option>
-          <option value="php">PHP (sans alias)</option>
-          <option value="php_alias">PHP (avec alias)</option>
-        </select>
-
-        <select name="species" id="export-species" class="sel">
-          <option value="">Toutes espèces</option>
-          <option value="dog" <%= "selected" if current_species == "dog" %>>Chiens</option>
-          <option value="cat" <%= "selected" if current_species == "cat" %>>Chats</option>
-        </select>
-
-        <button type="submit" class="btn secondary">Télécharger</button>
-      </form>
-
-      <script>
-        (function() {
-          const form    = document.getElementById("export-form");
-          const kindSel = document.getElementById("export-kind");
-
-          form.addEventListener("submit", function(e) {
-            const kind = kindSel.value;
-
-            if (kind === "csv") {
-              form.action = "<%= admin_professions_matrix_path(format: :csv) %>";
-            } else if (kind === "php") {
-              form.action = "<%= admin_professions_php_path %>";
-              const old = form.querySelector('input[name="include_aliases"]');
-              if (old) old.remove();
-            } else if (kind === "php_alias") {
-              form.action = "<%= admin_professions_php_path %>";
-              let inp = form.querySelector('input[name="include_aliases"]');
-              if (!inp) {
-                inp = document.createElement("input");
-                inp.type = "hidden";
-                inp.name = "include_aliases";
-                inp.value = "1";
-                form.appendChild(inp);
-              } else {
-                inp.value = "1";
-              }
-            }
-          });
-        })();
-      </script>
-    </div>
   <% end %>
 </div>
 
-<div class="toolbar" style="margin: 8px 0;">
-  <span class="muted">
-    <strong><%= @total.to_i %></strong> résultat<%= 's' if @total.to_i != 1 %>
-  </span>
+<!-- ====== EXPORTS (séparé du form de filtres) ====== -->
+<div class="card" style="margin-top:10px;">
+  <div class="filters-row" style="gap:8px; flex-wrap:wrap; align-items:center;">
+    <span class="muted" style="font-weight:600;">Exports :</span>
 
-  <% if @total_pages.to_i > 1 %>
-    <% total_pages_sane = [@total_pages.to_i, 1].max %>
-    <% prev_params = request.query_parameters.merge(page: (@page.to_i - 1).clamp(1, total_pages_sane), per_page: @per_page) %>
-    <% next_params = request.query_parameters.merge(page: (@page.to_i + 1).clamp(1, total_pages_sane), per_page: @per_page) %>
+    <form id="export-form"
+          action="<%= admin_professions_matrix_path(format: :csv) %>"
+          method="get"
+          data-turbo="false"
+          style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
 
-    <div style="margin-left:auto; display:flex; align-items:center; gap:8px;">
-      <%= link_to "← Précédent", admin_professions_path(prev_params), class: "btn", disabled: (@page.to_i <= 1) %>
-      <span class="muted">Page <%= @page.to_i %> / <%= @total_pages.to_i %></span>
-      <%= link_to "Suivant →", admin_professions_path(next_params), class: "btn", disabled: (@page.to_i >= @total_pages.to_i) %>
-    </div>
-  <% end %>
-</div>
+      <!-- format -->
+      <select name="export_kind" id="export-kind" class="sel">
+        <option value="csv">CSV référentiel + compagnies</option>
+        <option value="php">PHP (sans alias)</option>
+        <option value="php_alias">PHP (avec alias)</option>
+      </select>
 
-<div class="table-wrap">
-  <div class="table-scroll">
-    <table class="cp-table">
-      <thead>
-        <tr>
-          <th>Animal OGGO</th>
-          <th class="w-120 ta-center">Nb compagnies</th>
-          <th class="w-120 ta-right">Action</th>
-        </tr>
-      </thead>
-      <tbody>
-        <% if @professions.present? %>
-          <% @professions.each do |p| %>
-            <tr class="data-row">
-              <td><strong><%= p.name %></strong></td>
-              <td class="ta-center">
-                <span class="pill"><%= p.try(:carriers_count).to_i %></span>
-              </td>
-              <td class="ta-right">
-                <%= link_to "Détails", admin_profession_path(p, status: "approved"),
-                    class: "btn secondary", style: "padding:4px 10px; font-size:14px;" %>
-              </td>
-            </tr>
-          <% end %>
-        <% else %>
-          <tr>
-            <td colspan="3" class="muted ta-center">Aucun résultat.</td>
-          </tr>
-        <% end %>
-      </tbody>
-    </table>
+      <!-- espèce -->
+      <select name="species" id="export-species" class="sel">
+        <option value="">Toutes espèces</option>
+        <option value="dog" <%= "selected" if current_species == "dog" %>>Chiens</option>
+        <option value="cat" <%= "selected" if current_species == "cat" %>>Chats</option>
+      </select>
+
+      <button type="submit" class="btn secondary">Télécharger</button>
+    </form>
   </div>
 </div>
 
-<% if @total_pages.to_i > 1 %>
-  <% total_pages_sane = [@total_pages.to_i, 1].max %>
-  <% prev_params = request.query_parameters.merge(page: (@page.to_i - 1).clamp(1, total_pages_sane), per_page: @per_page) %>
-  <% next_params = request.query_parameters.merge(page: (@page.to_i + 1).clamp(1, total_pages_sane), per_page: @per_page) %>
+<script>
+  (function() {
+    const form    = document.getElementById("export-form");
+    const kindSel = document.getElementById("export-kind");
 
-  <div class="toolbar" style="justify-content:flex-end;">
-    <%= link_to "← Précédent", admin_professions_path(prev_params), class: "btn", disabled: (@page.to_i <= 1) %>
-    <span class="muted">Page <%= @page.to_i %> / <%= @total_pages.to_i %></span>
-    <%= link_to "Suivant →", admin_professions_path(next_params), class: "btn", disabled: (@page.to_i >= @total_pages.to_i) %>
-  </div>
-<% end %>
+    form.addEventListener("submit", function(e) {
+      const kind = kindSel.value;
+
+      if (kind === "csv") {
+        form.action = "<%= admin_professions_matrix_path(format: :csv) %>";
+      } else if (kind === "php") {
+        form.action = "<%= admin_professions_php_path %>";
+        const old = form.querySelector('input[name="include_aliases"]');
+        if (old) old.remove();
+      } else if (kind === "php_alias") {
+        form.action = "<%= admin_professions_php_path %>";
+        let inp = form.querySelector('input[name="include_aliases"]');
+        if (!inp) {
+          inp = document.createElement("input");
+          inp.type = "hidden";
+          inp.name = "include_aliases";
+          inp.value = "1";
+          form.appendChild(inp);
+        } else {
+          inp.value = "1";
+        }
+      }
+    });
+  })();
+</script>
