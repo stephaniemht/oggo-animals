@@ -2,7 +2,7 @@
 class Admin::CarrierProfessionsController < ApplicationController
   def index
     # redirection par défaut pour montrer aussi les pending
-    if params.permit!.to_h.slice("q", "status", "carrier_id", "only_once", "species").values.all?(&:blank?)
+    if params.permit!.to_h.slice("q","status","carrier_id","only_once","species").values.all?(&:blank?)
       redirect_to admin_carrier_professions_path(status: "all") and return
     end
 
@@ -10,7 +10,7 @@ class Admin::CarrierProfessionsController < ApplicationController
     @status     = params[:status].presence || "all"
     @carrier_id = params[:carrier_id].presence
     @only_once  = ActiveModel::Type::Boolean.new.cast(params[:only_once])
-    @species    = params[:species].presence_in(%w[dog cat]) # "dog" / "cat" / nil
+    @species    = params[:species].presence_in(%w[dog cat]) # nil = toutes espèces
 
     rel = CarrierProfession
             .includes(carrier_referential: :carrier)
@@ -26,12 +26,14 @@ class Admin::CarrierProfessionsController < ApplicationController
       )
     end
 
-    # filtre statut
+    # filtre status
     case @status
     when "all"
       rel = rel.where("profession_mappings.id IS NULL OR profession_mappings.status != ?", "rejected")
     when "unmapped"
-      rel = rel.where.not(id: ProfessionMapping.select(:carrier_profession_id).distinct)
+      rel = rel.where.not(
+        id: ProfessionMapping.select(:carrier_profession_id).distinct
+      )
     when "approved"
       approved_ids = ProfessionMapping.where(status: "approved").select(:carrier_profession_id)
       rejected_ids = ProfessionMapping.where(status: "rejected").select(:carrier_profession_id)
@@ -67,14 +69,15 @@ class Admin::CarrierProfessionsController < ApplicationController
                .where(profession_mappings: { profession_id: one_carrier_prof_ids })
     end
 
-    # filtre espèce (chien/chat)
-    rel = rel.where(species: @species) if @species
+    # filtre espèce
+    rel = rel.where(species: @species) if @species.present?
 
     rel = rel.distinct
 
     @carrier_professions = rel.order("carrier_professions.id ASC").limit(2000)
     @carriers = Carrier.order(:name)
 
+    # pour la colonne "nb compagnies"
     profession_ids = @carrier_professions.map { |cp| cp.profession_mappings.first&.profession_id }.compact.uniq
     @carriers_count_by_prof =
       if profession_ids.any?
@@ -148,13 +151,13 @@ class Admin::CarrierProfessionsController < ApplicationController
       return
 
     else
+      # affichage du formulaire de choix de la cible
       @selected = CarrierProfession
                     .includes(carrier_referential: :carrier, profession_mappings: :profession)
                     .where(id: @ids)
 
-      # Candidats = référentiel animaux pour l’espèce choisie
+      # Candidats = référentiel de l’espèce
       rel = Profession.where.not(animal_species: nil).where(animal_species: @species)
-
       rel = rel.joins(profession_mappings: { carrier_profession: { carrier_referential: :carrier } })
                .where.not(profession_mappings: { status: "rejected" })
       rel = rel.left_joins(:profession_synonyms) if defined?(ProfessionSynonym)
@@ -215,7 +218,7 @@ class Admin::CarrierProfessionsController < ApplicationController
     species = params[:species].presence_in(%w[dog cat]) || "dog"
     q       = params[:q].to_s.presence
 
-    # 🔐 Bloquer chien ↔ chat
+    # empêcher chien ↔ chat
     if target.animal_species.present? && target.animal_species != species
       redirect_to bulk_select_admin_carrier_professions_path(ids: ids, species: species, q: q),
                   alert: "Tu ne peux pas assigner un #{target.animal_species} depuis l’onglet #{species}."
@@ -246,7 +249,7 @@ class Admin::CarrierProfessionsController < ApplicationController
           updated += 1
         end
 
-        # Gestion des alias
+        # alias auto depuis le label compagnie
         if defined?(ProfessionSynonym)
           alias_norm = LabelNormalizer.call(cp.external_label)
           syn = ProfessionSynonym.find_by(alias_norm: alias_norm)
@@ -263,13 +266,13 @@ class Admin::CarrierProfessionsController < ApplicationController
           end
         end
 
-        # 💡 CHANGEMENT IMPORTANT :
-        # on fusionne plutôt que de détruire directement
+        # 👉 c’est ICI qu’on log maintenant la fusion de l’ancienne fiche
         if old_prof && old_prof.id != target.id &&
            ProfessionMapping.where(profession_id: old_prof.id).none?
           if defined?(Professions::MergeService)
             Professions::MergeService.new(source: old_prof, target: target).call
           else
+            # fallback ancien comportement
             ProfessionSynonym.where(profession_id: old_prof.id)
                              .update_all(profession_id: target.id) if defined?(ProfessionSynonym)
             old_prof.destroy!
@@ -288,5 +291,50 @@ class Admin::CarrierProfessionsController < ApplicationController
 
     redirect_to admin_carrier_professions_path(status: "all", species: species),
                 notice: msg
+  end
+
+  private
+
+  # tu l’avais dans ta version longue : je te le laisse
+  def ensure_referential_for(carrier_professions)
+    carrier_professions.each do |cp|
+      mapping = cp.profession_mappings.first
+      needs_mapping = mapping.nil? || mapping.status == "rejected"
+      next unless needs_mapping
+
+      label = cp.external_label.to_s.strip
+      next if label.blank?
+
+      species = cp.respond_to?(:species) ? cp.species : nil
+      species ||= @species
+
+      norm = LabelNormalizer.call(label)
+
+      prof =
+        Profession.where(animal_species: species).where(name_norm: norm).first ||
+        Profession.find_by(name: label)
+
+      unless prof
+        prof = Profession.create!(
+          name:           label,
+          name_norm:      norm,
+          animal_species: species
+        )
+      end
+
+      if mapping
+        mapping.update!(
+          profession: prof,
+          status:     "approved",
+          confidence: 1.0
+        )
+      else
+        cp.profession_mappings.create!(
+          profession: prof,
+          status:     "approved",
+          confidence: 1.0
+        )
+      end
+    end
   end
 end
