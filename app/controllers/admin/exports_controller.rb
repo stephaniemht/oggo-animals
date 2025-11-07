@@ -3,6 +3,7 @@ require "csv"
 
 class Admin::ExportsController < ApplicationController
   # === 1) EXPORT JSON : /admin/professions_export.json
+  # -> n’inclut que les professions ayant au moins 1 mapping NON "rejected"
   def professions
     rel = Profession
             .joins(:profession_mappings)
@@ -33,18 +34,18 @@ class Admin::ExportsController < ApplicationController
 
     render json: {
       exported_at: Time.current.iso8601,
-      count: payload.size,
-      professions: payload
+      count:        payload.size,
+      professions:  payload
     }
   end
 
   # === 2) EXPORT CSV “MATRIX” : /admin/professions_matrix.csv
-  # on ajoute species=dog|cat|... pour filtrer aussi ici
+  # on peut faire /admin/professions_matrix.csv?species=dog
   def professions_matrix
     species = params[:species].presence_in(%w[dog cat])
 
     carriers = Carrier.order(:name).to_a
-    header = ["Référentiel OGGO"] + carriers.map(&:name)
+    header   = ["Référentiel OGGO"] + carriers.map(&:name)
 
     rows_enum = Enumerator.new do |y|
       y << header
@@ -53,7 +54,6 @@ class Admin::ExportsController < ApplicationController
               .joins(:profession_mappings)
               .where.not(profession_mappings: { status: "rejected" })
               .distinct
-
       rel = rel.where(animal_species: species) if species.present?
 
       rel.order(:name).find_each do |p|
@@ -81,23 +81,32 @@ class Admin::ExportsController < ApplicationController
       end
     end
 
-    response.headers["Content-Type"] = "text/csv; charset=utf-8"
-    response.headers["Content-Disposition"] = "attachment; filename=professions_matrix.csv"
+    response.headers["Content-Type"]        = "text/csv; charset=utf-8"
+    response.headers["Content-Disposition"] = "attachment; filename=professions_matrix#{species ? "-#{species}" : ""}.csv"
     self.response_body = csv_with_bom(rows_enum)
   end
 
-  # === 3) EXPORT PHP : /admin/professions_php?species=dog&include_aliases=1
+  # === 3) EXPORT PHP : /admin/professions_php
+  # paramètres possibles :
+  #   ?species=dog|cat
+  #   ?include_aliases=1
+  #
+  # exemples :
+  #   /admin/professions_php               -> tout, sans alias
+  #   /admin/professions_php?include_aliases=1
+  #   /admin/professions_php?species=dog
+  #   /admin/professions_php?species=cat&include_aliases=1
   def professions_php
-    species        = params[:species].presence_in(%w[dog cat])
+    species         = params[:species].presence_in(%w[dog cat])
     include_aliases = ActiveModel::Type::Boolean.new.cast(params[:include_aliases]) && defined?(ProfessionSynonym)
-    map            = {}
+
+    map = {}
 
     # a) noms officiels
     prof_rel = Profession
       .joins(:profession_mappings)
       .where.not(profession_mappings: { status: "rejected" })
       .distinct
-
     prof_rel = prof_rel.where(animal_species: species) if species.present?
 
     prof_rel.order(:name).find_each do |p|
@@ -105,7 +114,7 @@ class Admin::ExportsController < ApplicationController
       map[clean] = clean
     end
 
-    # b) alias
+    # b) alias (optionnel)
     alias_count = 0
     if include_aliases
       syn_rel = ProfessionSynonym
@@ -119,7 +128,6 @@ class Admin::ExportsController < ApplicationController
           "professions.animal_species"
         )
         .distinct
-
       syn_rel = syn_rel.where(professions: { animal_species: species }) if species.present?
 
       syn_rel.find_each do |row|
@@ -143,6 +151,12 @@ class Admin::ExportsController < ApplicationController
     total_entries = map.size
     species_label = species.present? ? "Espèce : #{species}" : "Espèce : toutes"
 
+    # on choisit un nom de fichier un peu parlant
+    filename_parts = ["professions"]
+    filename_parts << species if species.present?
+    filename_parts << "with-aliases" if include_aliases
+    filename = filename_parts.join("-") + ".php"
+
     php = +"<?php\n"
     php << "// Export OGGO — #{mode}\n"
     php << "// #{species_label}\n"
@@ -151,7 +165,14 @@ class Admin::ExportsController < ApplicationController
     php << "\n"
     php << "\$professions = [\n"
 
+    # rendu un peu plus lisible : on insère une ligne vide à chaque changement de première lettre
+    last_letter = nil
     map.sort_by { |k, _| k.downcase }.each do |k, v|
+      first_letter = k[0]&.upcase
+      if include_aliases && first_letter && first_letter != last_letter
+        php << "\n" if last_letter # pas au tout début
+        last_letter = first_letter
+      end
       php << "  #{php_quote(fix_mojibake(k))} => #{php_quote(fix_mojibake(v))},\n"
     end
 
@@ -159,13 +180,14 @@ class Admin::ExportsController < ApplicationController
     php << "return \$professions;\n"
 
     send_data php,
-              filename: "professions#{species ? "-#{species}" : ""}.php",
-              type: "application/x-httpd-php; charset=utf-8",
+              filename:   filename,
+              type:       "application/x-httpd-php; charset=utf-8",
               disposition: "attachment"
   end
 
   private
 
+  # essaie de réparer les chaînes doublement mal lues (Ã… Â…)
   def fix_mojibake(str)
     return "" if str.nil?
     s = str.to_s.dup
