@@ -96,11 +96,13 @@
     const form    = document.getElementById("export-form");
     const kindSel = document.getElementById("export-kind");
 
-    form.addEventListener("submit", function(e) {
+    form.addEventListener("submit", function() {
       const kind = kindSel.value;
 
       if (kind === "csv") {
         form.action = "<%= admin_professions_matrix_path(format: :csv) %>";
+        const old = form.querySelector('input[name="include_aliases"]');
+        if (old) old.remove();
       } else if (kind === "php") {
         form.action = "<%= admin_professions_php_path %>";
         const old = form.querySelector('input[name="include_aliases"]');
@@ -121,7 +123,6 @@
     });
   })();
 </script>
-
 
 <div class="toolbar" style="margin: 8px 0;">
   <span class="muted">
@@ -155,13 +156,15 @@
         <% if @professions.present? %>
           <% @professions.each do |p| %>
             <tr class="data-row">
-              <td><strong><%= p.name %></strong></td>
+              <td><strong><%= fix_encoding(p.name) %></strong></td>
               <td class="ta-center">
                 <span class="pill"><%= p.try(:carriers_count).to_i %></span>
               </td>
               <td class="ta-right">
-                <%= link_to "Détails", admin_profession_path(p, status: "approved"),
-                    class: "btn secondary", style: "padding:4px 10px; font-size:14px;" %>
+                <%= link_to "Détails",
+                            admin_profession_path(p, status: "approved"),
+                            class: "btn secondary",
+                            style: "padding:4px 10px; font-size:14px;" %>
               </td>
             </tr>
           <% end %>
