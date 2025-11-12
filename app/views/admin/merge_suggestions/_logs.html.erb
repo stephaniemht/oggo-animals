@@ -1,7 +1,7 @@
 <%# app/views/admin/merge_suggestions/_logs.html.erb %>
 
 <div class="logs-page">
-  <!-- on met TOUT dans logs-section pour que ton JS le voie -->
+  <!-- on met TOUT dans logs-section pour que le JS puisse déléguer les events -->
   <div id="logs-section">
 
     <div class="filters-row">
@@ -26,7 +26,7 @@
             <tr>
               <th></th>
               <th>Quand</th>
-              <th>Métier fusionné (source)</th>
+              <th>Source (fusionné)</th>
               <th>Cible (métier final)</th>
               <th>Statut</th>
               <th>Action</th>
@@ -34,26 +34,39 @@
           </thead>
           <tbody>
             <% @logs.each do |log| %>
-              <% source_label = (log.source_attrs || {})["name"].presence || "##{log.source_id}" %>
-              <% target_label = (@targets_by_id || {})[log.target_id] || "##{log.target_id}" %>
+              <% raw_source = (log.source_attrs || {})["name"].presence || "##{log.source_id}" %>
+              <% raw_target = (@targets_by_id || {})[log.target_id] || "##{log.target_id}" %>
 
-              <tr class="data-row log-row">
+              <% source_label = fix_encoding(raw_source) %>
+              <% target_label = fix_encoding(raw_target) %>
+              <% when_txt     = (log.performed_at || log.created_at) %>
+
+              <tr class="data-row log-row"
+                  data-search="<%= [source_label, target_label, when_txt&.strftime('%d/%m/%Y %H:%M')].join(' ').downcase %>">
                 <td><input type="checkbox" class="log-checkbox" value="<%= log.id %>"></td>
-                <td><%= l(log.performed_at || log.created_at, format: :short) rescue (log.performed_at || log.created_at) %></td>
+
+                <td>
+                  <%= l(when_txt, format: :short) rescue when_txt %>
+                </td>
+
                 <td class="log-source"><%= source_label %></td>
                 <td class="log-target"><%= target_label %></td>
+
                 <td>
                   <% if log.undone_at.present? %>
-                    <span class="badge rejected">Annulé le <%= l(log.undone_at, format: :short) %></span>
+                    <span class="badge rejected">
+                      Annulé le <%= l(log.undone_at, format: :short) %>
+                    </span>
                   <% else %>
                     <span class="badge approved">Actif</span>
                   <% end %>
                 </td>
+
                 <td>
                   <button type="button"
                           class="btn secondary single-undo-btn"
                           data-id="<%= log.id %>"
-                          <%= "disabled" if log.undone_at.present? %>>
+                          <%= 'disabled="disabled"' if log.undone_at.present? %>>
                     Undo
                   </button>
                 </td>
@@ -63,5 +76,6 @@
         </table>
       <% end %>
     </div>
+
   </div>
 </div>
