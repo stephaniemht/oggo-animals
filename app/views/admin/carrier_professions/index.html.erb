@@ -116,11 +116,18 @@
             <% carrier = cp.carrier_referential.carrier.name %>
 
             <%# mapping actif (non rejeté) s'il existe %>
-            <% m_active = cp.profession_mappings.find { |pm| pm.status != "rejected" && pm.profession.present? } %>
-            <% has_non_rejected = cp.profession_mappings.any? { |pm| pm.status != "rejected" } %>
+            <% m_active = cp.profession_mappings.detect { |pm| pm.status != "rejected" && pm.profession.present? } %>
 
-            <%# statut affiché : rejected si aucun mapping actif ; sinon statut du mapping actif %>
-            <% row_status = has_non_rejected ? (m_active&.status || "unmapped") : "rejected" %>
+            <%# statut affiché :
+               - unmapped si aucun mapping du tout
+               - rejected si présents mais tous rejetés
+               - sinon statut du mapping actif %>
+            <% row_status =
+                if m_active
+                  m_active.status
+                else
+                  cp.profession_mappings.any? ? "rejected" : "unmapped"
+                end %>
 
             <% badge_class =
                 case row_status
@@ -135,14 +142,14 @@
                 <%= check_box_tag "ids[]", cp.id, false, class: "row-check" %>
               </td>
 
-              <td><span class="pill"><%= carrier %></span></td>
+              <td><span class="pill"><%= fix_encoding(carrier) %></span></td>
 
               <!-- ✅ nettoyage encodage -->
-              <td><strong><%= clean_encoding(cp.external_label) %></strong></td>
+              <td><strong><%= fix_encoding(cp.external_label) %></strong></td>
 
               <td>
                 <% if m_active&.profession %>
-                  <strong><%= clean_encoding(m_active.profession.name) %></strong>
+                  <strong><%= fix_encoding(m_active.profession.name) %></strong>
                 <% else %>
                   <span class="muted">(pas de mapping)</span>
                 <% end %>
@@ -177,3 +184,33 @@
     </div>
   </div>
 <% end %>
+
+<script>
+  // Petit confort : compteur sélection + "tout cocher"
+  (function() {
+    const bulk = document.getElementById("bulk-form");
+    if (!bulk) return;
+
+    const checkAll = bulk.querySelector("#check-all");
+    const rows     = () => Array.from(bulk.querySelectorAll(".row-check"));
+    const counter  = bulk.querySelector("#sel-count");
+
+    function refreshCount() {
+      const n = rows().filter(cb => cb.checked).length;
+      if (counter) counter.textContent = n + " sélection" + (n > 1 ? "s" : "");
+    }
+
+    if (checkAll) {
+      checkAll.addEventListener("change", () => {
+        rows().forEach(cb => cb.checked = checkAll.checked);
+        refreshCount();
+      });
+    }
+
+    bulk.addEventListener("change", (e) => {
+      if (e.target && e.target.classList.contains("row-check")) refreshCount();
+    });
+
+    refreshCount();
+  })();
+</script>
