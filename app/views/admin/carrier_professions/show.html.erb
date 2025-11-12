@@ -1,27 +1,54 @@
+<%# app/views/admin/carrier_professions/show.html.erb %>
+
 <h1>Détail métier compagnie</h1>
 
 <% cp = @carrier_profession %>
+<% carrier_name = cp&.carrier_referential&.carrier&.name %>
+
 <p>
-  <strong>Compagnie :</strong> <%= cp.carrier_referential.carrier.name %><br>
-  <strong>Libellé :</strong> <%= cp.external_label %>
+  <strong>Compagnie :</strong>
+  <span class="pill"><%= fix_encoding(carrier_name) %></span><br>
+  <strong>Libellé :</strong> <%= fix_encoding(cp.external_label) %>
 </p>
 
 <% if @mapping %>
+  <% status = @mapping.status.to_s %>
+  <% badge_class =
+      case status
+      when "approved" then "approved"
+      when "pending"  then "pending"
+      when "rejected" then "rejected"
+      else "unmapped"
+      end %>
+
   <h3>Proposition / Mapping</h3>
   <p>
-    <strong>OGGO :</strong> <%= @mapping.profession&.name || "-" %><br>
-    <strong>Status :</strong> <%= @mapping.status %><br>
-    <strong>Score :</strong> <%= @mapping.confidence ? number_to_percentage(@mapping.confidence * 100, precision: 0) : "-" %>
+    <strong>OGGO :</strong> <%= @mapping.profession ? fix_encoding(@mapping.profession.name) : "-" %><br>
+    <strong>Statut :</strong> <span class="badge <%= badge_class %>"><%= status %></span><br>
+    <strong>Score :</strong>
+    <%= @mapping.confidence ? number_to_percentage((@mapping.confidence.to_f * 100).round, precision: 0) : "-" %>
   </p>
+
   <p>
-    <%= link_to "Changer", edit_admin_profession_mapping_path(@mapping) %>
+    <%= link_to "Changer",
+                edit_admin_profession_mapping_path(@mapping, species: params[:species], status: params[:status]),
+                class: "btn secondary" %>
   </p>
 <% else %>
-  <div style="border:1px solid #e99; padding:8px;">
+  <div class="alert" style="border:1px solid #e99; padding:8px; border-radius:8px;">
     Aucun mapping pour ce libellé.
   </div>
 <% end %>
 
 <p style="margin-top:1rem;">
-  <%= link_to "← Retour à la liste", admin_carrier_professions_path %>
+  <%= link_to "← Retour à la liste",
+              admin_carrier_professions_path(
+                q: params[:q],
+                carrier_id: params[:carrier_id],
+                status: params[:status],
+                only_once: params[:only_once],
+                species: params[:species],
+                page: params[:page]
+              ),
+              class: "btn" %>
 </p>

@@ -3,7 +3,7 @@
 <% cp = @mapping.carrier_profession %>
 <% current_species = (@species.presence_in(%w[dog cat]) || "dog") %>
 
-<!-- 🔹 ONGlets espèces -->
+<!-- 🔹 Onglets espèces -->
 <div style="display:flex; gap:8px; margin: 8px 0 12px;">
   <%= link_to "🐶 Chiens",
       edit_admin_profession_mapping_path(@mapping, species: "dog", q: params[:q]),
@@ -21,12 +21,12 @@
   <div style="display:flex; flex-wrap:wrap; gap:12px; align-items:flex-start;">
     <div>
       <div class="muted" style="text-transform:uppercase; font-weight:700; letter-spacing:.04em; margin-bottom:6px;">Compagnie</div>
-      <div class="pill"><%= cp.carrier_referential.carrier.name %></div>
+      <div class="pill"><%= clean_encoding(cp.carrier_referential.carrier.name) %></div>
     </div>
 
     <div>
       <div class="muted" style="text-transform:uppercase; font-weight:700; letter-spacing:.04em; margin-bottom:6px;">Libellé compagnie</div>
-      <div style="font-weight:700; color:#111827;"><%= cp.external_label %></div>
+      <div style="font-weight:700; color:#111827;"><%= clean_encoding(cp.external_label) %></div>
     </div>
 
     <div>
@@ -34,11 +34,11 @@
         Proposition actuelle
       </div>
       <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-        <span class="pill"><%= @mapping.profession&.name || "-" %></span>
+        <span class="pill"><%= @mapping.profession ? clean_encoding(@mapping.profession.name) : "-" %></span>
         <span class="muted">statut :</span>
         <span class="pill"><%= @mapping.status %></span>
         <span class="muted">présent dans :</span>
-        <span class="pill"><%= @current_carriers_count %></span>
+        <span class="pill"><%= @current_carriers_count.to_i %></span>
         <span class="muted">compagnie(s)</span>
       </div>
     </div>
@@ -54,7 +54,7 @@
       <%= text_field_tag :q, @q, placeholder: "ex: berger, siamois…", class: "inp" %>
       <%= submit_tag "Rechercher", class: "btn" %>
       <% if @q.present? %>
-        <span class="muted">Résultats pour « <strong><%= @q %></strong> »</span>
+        <span class="muted">Résultats pour « <strong><%= clean_encoding(@q) %></strong> »</span>
       <% end %>
     </div>
   <% end %>
@@ -69,15 +69,15 @@
           <thead>
             <tr>
               <th>Animal OGGO</th>
-              <th class="w-120">Nb compagnies</th>
+              <th class="w-120 ta-center">Nb compagnies</th>
               <th class="w-220">Assigner</th>
             </tr>
           </thead>
           <tbody>
             <% @candidates.each do |p| %>
               <tr class="data-row">
-                <td><strong><%= p.name %></strong></td>
-                <td><span class="pill"><%= p.try(:carriers_count).to_i %></span></td>
+                <td><strong><%= clean_encoding(p.name) %></strong></td>
+                <td class="ta-center"><span class="pill"><%= p.try(:carriers_count).to_i %></span></td>
                 <td>
                   <%= form_with url: assign_admin_profession_mapping_path(@mapping),
                                 method: :post,

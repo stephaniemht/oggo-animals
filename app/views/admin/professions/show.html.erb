@@ -1,4 +1,8 @@
-<h1><%= @profession.name %></h1>
+<%# app/views/admin/professions/show.html.erb %>
+
+<h1><%= fix_encoding(@profession.name) %></h1>
+
+<% current_status = params[:status].presence || "approved" %>
 
 <nav style="margin-bottom:1rem;">
   <strong>Voir :</strong>
@@ -6,7 +10,7 @@
   <%= link_to "Pending",  admin_profession_path(@profession, status: "pending") %> |
   <%= link_to "Rejected", admin_profession_path(@profession, status: "rejected") %> |
   <%= link_to "All",      admin_profession_path(@profession, status: "all") %> |
-  <%= link_to "← Retour au référentiel", admin_professions_path %>
+  <%= link_to "← Retour au référentiel", admin_professions_path(species: params[:species]) %>
 </nav>
 
 <%# Compteurs par statut (pour cette profession) %>
@@ -14,7 +18,7 @@
 <p style="margin:.25rem 0 1rem;">
   <strong>Compteurs</strong> —
   Approved: <%= counts["approved"] || 0 %> ·
-  Pending: <%= counts["pending"] || 0 %> ·
+  Pending:  <%= counts["pending"]  || 0 %> ·
   Rejected: <%= counts["rejected"] || 0 %>
 </p>
 
@@ -24,10 +28,10 @@
     <ul>
       <% @possible_duplicates.each do |dup| %>
         <li>
-          <%= dup.name %>
+          <%= fix_encoding(dup.name) %>
           <%= form_with url: merge_into_admin_profession_path(@profession), method: :post, local: true, style: "display:inline;margin-left:8px;" do %>
             <%= hidden_field_tag :target_id, dup.id %>
-            <%= submit_tag "Fusionner cette fiche dans « #{dup.name} »" %>
+            <%= submit_tag "Fusionner cette fiche dans « #{fix_encoding(dup.name)} »" %>
           <% end %>
         </li>
       <% end %>
@@ -35,27 +39,51 @@
   </div>
 <% end %>
 
-<table border="1" cellpadding="6" cellspacing="0">
-  <thead>
-    <tr>
-      <th>Compagnie</th>
-      <th>Libellé compagnie</th>
-      <th>Status</th>
-      <th>Score</th>
-      <th>Actions</th>
-    </tr>
-  </thead>
-  <tbody>
-    <% @mappings.each do |m| %>
-      <% cp = m.carrier_profession %>
-      <% carrier = cp.carrier_referential.carrier.name %>
-      <tr>
-        <td><%= carrier %></td>
-        <td><%= cp.external_label %></td>
-        <td><%= m.status %></td>
-        <td><%= m.confidence ? number_to_percentage(m.confidence * 100, precision: 0) : "-" %></td>
-        <td><%= link_to "Changer", edit_admin_profession_mapping_path(m) %></td>
-      </tr>
-    <% end %>
-  </tbody>
-</table>
+<div class="table-wrap">
+  <div class="table-scroll">
+    <table class="cp-table">
+      <thead>
+        <tr>
+          <th>Compagnie</th>
+          <th>Libellé compagnie</th>
+          <th>Statut</th>
+          <th>Score</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @mappings.each do |m| %>
+          <% cp = m.carrier_profession %>
+          <% carrier_name = cp&.carrier_referential&.carrier&.name %>
+          <% status = m.status.to_s %>
+
+          <% badge_class =
+              case status
+              when "approved" then "approved"
+              when "pending"  then "pending"
+              when "rejected" then "rejected"
+              else "unmapped"
+              end %>
+
+          <tr class="data-row">
+            <td><span class="pill"><%= fix_encoding(carrier_name) %></span></td>
+            <td><strong><%= fix_encoding(cp&.external_label) %></strong></td>
+            <td><span class="badge <%= badge_class %>"><%= status %></span></td>
+            <td><%= m.confidence ? number_to_percentage((m.confidence.to_f * 100.0).round, precision: 0) : "-" %></td>
+            <td>
+              <%= link_to "Changer",
+                          edit_admin_profession_mapping_path(m, species: params[:species], status: current_status),
+                          class: "btn-link" %>
+            </td>
+          </tr>
+        <% end %>
+
+        <% if @mappings.blank? %>
+          <tr>
+            <td colspan="5" class="muted ta-center">Aucun mapping pour ce filtre.</td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+</div>
