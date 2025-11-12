@@ -76,8 +76,22 @@ module Professions
         end
 
         log.update!(undone_at: Time.current)
+        # Rejeter tout mapping "cible" concurrent non-rejeté quand le mapping "source" a été restauré
+        cp_ids = ProfessionMapping.where(id: log.mapping_ids).pluck(:carrier_profession_id).uniq
+        if cp_ids.any?
+          has_active_source = ProfessionMapping
+                                .where(carrier_profession_id: cp_ids, profession_id: log.source_id)
+                                .where.not(status: "rejected")
+                                .exists?
+          if has_active_source
+            ProfessionMapping
+              .where(carrier_profession_id: cp_ids, profession_id: log.target_id)
+              .where.not(id: log.mapping_ids) # sûreté
+              .where.not(status: "rejected")
+              .update_all(status: "rejected", updated_at: Time.current)
+          end
+        end
       end
-
       true
     end
   end
