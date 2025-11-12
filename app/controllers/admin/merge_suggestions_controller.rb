@@ -349,7 +349,7 @@ class Admin::MergeSuggestionsController < ApplicationController
         targets_by_id = Profession.where(id: target_ids).pluck(:id, :name).to_h
 
         render turbo_stream: turbo_stream.replace(
-          "logs",
+          "logs-section",
           partial: "admin/merge_suggestions/logs",
           locals: { logs: logs, targets_by_id: targets_by_id }
         )
@@ -399,7 +399,7 @@ class Admin::MergeSuggestionsController < ApplicationController
         targets_by_id = Profession.where(id: target_ids).pluck(:id, :name).to_h
 
         render turbo_stream: turbo_stream.replace(
-          "logs",
+          "logs-section",
           partial: "admin/merge_suggestions/logs",
           locals: { logs: logs, targets_by_id: targets_by_id }
         )
