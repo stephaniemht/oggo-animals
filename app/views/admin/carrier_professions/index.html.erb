@@ -1,6 +1,6 @@
 <h1 class="cp-title">Animaux des compagnies</h1>
 
-<!-- 🔹 ONGlets espèces -->
+<!-- 🔹 Onglets espèces -->
 <div style="display:flex; gap:8px; margin: 8px 0 12px;">
   <% base_params = request.query_parameters.except(:page).symbolize_keys %>
   <% current_species = params[:species].presence_in(%w[dog cat]) %>
@@ -114,11 +114,16 @@
         <tbody>
           <% @carrier_professions.each do |cp| %>
             <% carrier = cp.carrier_referential.carrier.name %>
-            <% m = cp.profession_mappings.find { |pm| pm.status != "rejected" && pm.profession.present? } %>
 
-            <% status = (m&.status || "unmapped").to_s %>
+            <%# mapping actif (non rejeté) s'il existe %>
+            <% m_active = cp.profession_mappings.find { |pm| pm.status != "rejected" && pm.profession.present? } %>
+            <% has_non_rejected = cp.profession_mappings.any? { |pm| pm.status != "rejected" } %>
+
+            <%# statut affiché : rejected si aucun mapping actif ; sinon statut du mapping actif %>
+            <% row_status = has_non_rejected ? (m_active&.status || "unmapped") : "rejected" %>
+
             <% badge_class =
-                case status
+                case row_status
                 when "approved" then "approved"
                 when "pending"  then "pending"
                 when "rejected" then "rejected"
@@ -129,21 +134,23 @@
               <td>
                 <%= check_box_tag "ids[]", cp.id, false, class: "row-check" %>
               </td>
+
               <td><span class="pill"><%= carrier %></span></td>
 
               <!-- ✅ nettoyage encodage -->
-              <td><strong><%= fix_encoding(cp.external_label) %></strong></td>
+              <td><strong><%= clean_encoding(cp.external_label) %></strong></td>
+
               <td>
-                <% if m&.profession %>
-                  <strong><%= fix_encoding(m.profession.name) %></strong>
+                <% if m_active&.profession %>
+                  <strong><%= clean_encoding(m_active.profession.name) %></strong>
                 <% else %>
                   <span class="muted">(pas de mapping)</span>
                 <% end %>
               </td>
 
               <td class="ta-right">
-                <% if m&.profession_id %>
-                  <% nb = @carriers_count_by_prof[m.profession_id].to_i %>
+                <% if m_active&.profession_id %>
+                  <% nb = @carriers_count_by_prof[m_active.profession_id].to_i %>
                   <span class="pill"><%= nb %></span>
                 <% else %>
                   <span class="muted">-</span>
@@ -151,13 +158,13 @@
               </td>
 
               <td>
-                <span class="badge <%= badge_class %>"><%= status %></span>
+                <span class="badge <%= badge_class %>"><%= row_status %></span>
               </td>
 
               <td>
-                <% if m %>
+                <% if m_active %>
                   <%= link_to "Changer",
-                              edit_admin_profession_mapping_path(m, species: current_species),
+                              edit_admin_profession_mapping_path(m_active, species: current_species),
                               class: "btn-link" %>
                 <% else %>
                   <span class="muted">(aucune action)</span>

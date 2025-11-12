@@ -13,20 +13,20 @@ class Admin::CarrierProfessionsController < ApplicationController
     @species    = params[:species].presence_in(%w[dog cat]) # nil = toutes espèces
 
     rel = CarrierProfession
-            .includes(carrier_referential: :carrier)
+            .includes(carrier_referential: :carrier, :profession_mappings)
             .left_joins(:profession_mappings)
 
-    # filtre texte
+    # --- filtre texte
     rel = rel.where("carrier_professions.external_label ILIKE ?", "%#{@q}%") if @q.present?
 
-    # filtre compagnie
+    # --- filtre compagnie
     if @carrier_id
       rel = rel.where(
         carrier_referential_id: CarrierReferential.where(carrier_id: @carrier_id).select(:id)
       )
     end
 
-    # filtre status
+    # --- filtre status
     case @status
     when "all"
       rel = rel.where("profession_mappings.id IS NULL OR profession_mappings.status != ?", "rejected")
@@ -35,20 +35,22 @@ class Admin::CarrierProfessionsController < ApplicationController
         id: ProfessionMapping.select(:carrier_profession_id).distinct
       )
     when "approved"
-      approved_ids = ProfessionMapping.where(status: "approved").select(:carrier_profession_id)
-      rejected_ids = ProfessionMapping.where(status: "rejected").select(:carrier_profession_id)
-      rel = rel.where(id: approved_ids).where.not(id: rejected_ids)
+      approved_ids     = ProfessionMapping.where(status: "approved").select(:carrier_profession_id)
+      rejected_ids_all = ProfessionMapping.where(status: "rejected").select(:carrier_profession_id)
+      rel = rel.where(id: approved_ids).where.not(id: rejected_ids_all)
     when "pending"
       pending_ids = ProfessionMapping.where(status: "pending").select(:carrier_profession_id)
       rel = rel.where(id: pending_ids)
     when "rejected"
-      rejected_ids = ProfessionMapping.where(status: "rejected").select(:carrier_profession_id)
-      rel = rel.where(id: rejected_ids)
+      # Lignes ENTIEREMENT rejetées : au moins un 'rejected' ET aucun non-rejeté
+      rejected_ids     = ProfessionMapping.where(status: "rejected").select(:carrier_profession_id)
+      non_rejected_ids = ProfessionMapping.where.not(status: "rejected").select(:carrier_profession_id)
+      rel = rel.where(id: rejected_ids).where.not(id: non_rejected_ids)
     else
       rel = rel.where("profession_mappings.id IS NULL OR profession_mappings.status != ?", "rejected")
     end
 
-    # filtre "présent dans une seule compagnie"
+    # --- filtre "présent dans une seule compagnie"
     if @only_once
       mapping_status_filter =
         case @status
@@ -69,7 +71,7 @@ class Admin::CarrierProfessionsController < ApplicationController
                .where(profession_mappings: { profession_id: one_carrier_prof_ids })
     end
 
-    # filtre espèce
+    # --- filtre espèce
     rel = rel.where(species: @species) if @species.present?
 
     rel = rel.distinct
@@ -77,22 +79,22 @@ class Admin::CarrierProfessionsController < ApplicationController
     @carrier_professions = rel.order("carrier_professions.id ASC").limit(2000)
     @carriers = Carrier.order(:name)
 
-    # pour la colonne "nb compagnies"
-  profession_ids = @carrier_professions.map { |cp|
-    cp.profession_mappings.find { |pm| pm.status != "rejected" && pm.profession_id.present? }&.profession_id
-  }.compact.uniq
+    # ---- Compteur "nb compagnies" basé sur la profession ACTIVE par ligne ----
+    active_profession_ids = @carrier_professions.map { |cp|
+      cp.profession_mappings.find { |pm| pm.status != "rejected" && pm.profession_id.present? }&.profession_id
+    }.compact.uniq
 
-  @carriers_count_by_prof =
-    if profession_ids.any?
-      ProfessionMapping
-        .joins(carrier_profession: { carrier_referential: :carrier })
-        .where(profession_id: profession_ids)
-        .where.not(status: "rejected")
-        .group(:profession_id)
-        .count("DISTINCT carriers.id")
-    else
-      {}
-    end
+    @carriers_count_by_prof =
+      if active_profession_ids.any?
+        ProfessionMapping
+          .joins(carrier_profession: { carrier_referential: :carrier })
+          .where(profession_id: active_profession_ids)
+          .where.not(status: "rejected")
+          .group(:profession_id)
+          .count("DISTINCT carriers.id")
+      else
+        {}
+      end
   end
 
   def show
@@ -109,10 +111,10 @@ class Admin::CarrierProfessionsController < ApplicationController
 
   def bulk_select
     @selected   ||= []
-    @ids          = Array(params[:ids]).map(&:to_i).uniq
-    bulk_action   = params[:bulk_action].to_s
-    @species      = params[:species].presence_in(%w[dog cat]) || "dog"
-    @q            = params[:q].to_s
+    @ids        = Array(params[:ids]).map(&:to_i).uniq
+    bulk_action = params[:bulk_action].to_s
+    @species    = params[:species].presence_in(%w[dog cat]) || "dog"
+    @q          = params[:q].to_s
 
     if @ids.empty?
       redirect_to admin_carrier_professions_path(status: "all", species: @species),
@@ -124,16 +126,13 @@ class Admin::CarrierProfessionsController < ApplicationController
     when "mark_rejected"
       updated = 0
       CarrierProfession.includes(:profession_mappings).where(id: @ids).find_each do |cp|
-        m = cp.profession_mappings.first
-        next unless m
-        if m.status != "rejected"
-          m.update(status: "rejected")
-          updated += 1
-        end
+        # ✅ rejette TOUS les mappings non-rejetés de la ligne
+        count = cp.profession_mappings.where.not(status: "rejected").update_all(status: "rejected", updated_at: Time.current)
+        updated += count
       end
 
       redirect_to admin_carrier_professions_path(status: "all", species: @species),
-                  notice: "#{updated} élément(s) passé(s) en 'rejected'."
+                  notice: "#{updated} mapping(s) passé(s) en 'rejected'."
       return
 
     when "mark_approved"
@@ -269,13 +268,12 @@ class Admin::CarrierProfessionsController < ApplicationController
           end
         end
 
-        # 👉 c’est ICI qu’on log maintenant la fusion de l’ancienne fiche
+        # Logging de fusion et nettoyage si l'ancienne fiche n'a plus de mappings
         if old_prof && old_prof.id != target.id &&
            ProfessionMapping.where(profession_id: old_prof.id).none?
           if defined?(Professions::MergeService)
             Professions::MergeService.new(source: old_prof, target: target).call
           else
-            # fallback ancien comportement
             ProfessionSynonym.where(profession_id: old_prof.id)
                              .update_all(profession_id: target.id) if defined?(ProfessionSynonym)
             old_prof.destroy!
@@ -298,7 +296,7 @@ class Admin::CarrierProfessionsController < ApplicationController
 
   private
 
-  # tu l’avais dans ta version longue : je te le laisse
+  # helper laissé en place si tu l’utilises par ailleurs
   def ensure_referential_for(carrier_professions)
     carrier_professions.each do |cp|
       mapping = cp.profession_mappings.first
