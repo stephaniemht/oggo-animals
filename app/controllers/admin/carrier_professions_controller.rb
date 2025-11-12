@@ -13,7 +13,7 @@ class Admin::CarrierProfessionsController < ApplicationController
     @species    = params[:species].presence_in(%w[dog cat]) # nil = toutes espèces
 
     rel = CarrierProfession
-            .includes(carrier_referential: :carrier, :profession_mappings)
+            .includes(:profession_mappings, carrier_referential: :carrier)
             .left_joins(:profession_mappings)
 
     # --- filtre texte
