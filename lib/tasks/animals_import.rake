@@ -490,3 +490,129 @@ namespace :oggo do
     puts "   Mappings créés           : #{mappings_created}"
   end
 end
+
+namespace :oggo do
+  desc "Importe les races chat OGGO Data (prod) comme Professions + CarrierProfessions + ProfessionMappings.
+        Utilisation : rake \"oggo:import_cats_from_prod\""
+  task import_cats_from_prod: :environment do
+    require "csv"
+    require "digest"
+
+    # 1. On pointe vers le CSV des chats
+    csv_path = Rails.root.join("imports", "oggo_data_cats.csv")
+
+    unless File.exist?(csv_path)
+      puts "❌ Fichier introuvable : #{csv_path}"
+      exit 1
+    end
+
+    puts "📂 Lecture du fichier : #{csv_path}"
+
+    # 2. On récupère / crée la compagnie OGGO Data
+    carrier = Carrier.find_or_create_by!(name: "Oggo Data")
+    puts "✅ Carrier : ##{carrier.id} — #{carrier.name}"
+
+    # 3. On crée / récupère un CarrierReferential pour ce fichier
+    file_sha = Digest::SHA256.file(csv_path).hexdigest
+
+    referential = CarrierReferential.find_or_create_by!(
+      carrier: carrier,
+      source_filename: File.basename(csv_path),
+      file_sha256: file_sha
+    ) do |ref|
+      ref.version_label = "OGGO Data chats prod #{Time.current.strftime('%Y-%m-%d %H:%M')}"
+      ref.imported_at   = Time.current
+    end
+
+    puts "✅ CarrierReferential : ##{referential.id} — #{referential.version_label}"
+
+    professions_created     = 0
+    carrier_profs_created   = 0
+    mappings_created        = 0
+
+    # 4. On parcourt chaque ligne du CSV
+    CSV.foreach(csv_path, headers: true, col_sep: ";") do |row|
+      raw_label = row["Nom"] || row["nom"] || row["Name"] || row["name"] || row["label"] || row["Label"]
+      raw_id    = row["ID"]  || row["Id"]  || row["id"]  || row["Code"] || row["code"]
+
+      label = raw_label.to_s.strip
+      next if label.empty?
+
+      norm_label = norm(label)
+      if norm_label.blank?
+        puts "⚠️ Norm vide pour : #{label.inspect}, ligne ignorée"
+        next
+      end
+
+      # 4.a Profession dans TON référentiel
+      profession = Profession.find_by(name_norm: norm_label)
+
+      if profession.nil?
+        # aucune profession avec ce name_norm → on en crée une
+        profession = Profession.create!(
+          name:           label,
+          name_norm:      norm_label,
+          animal_species: "cat",
+          animal_kind:    "breed" # on suppose que ce sont aussi des races
+        )
+        professions_created += 1
+        puts "🆕 Profession créée : ##{profession.id} — #{profession.name}"
+      else
+        # une profession existe déjà → on la complète au besoin
+        updated = false
+
+        if profession.animal_species.blank?
+          profession.animal_species = "cat"
+          updated = true
+        end
+
+        if profession.animal_kind.blank?
+          profession.animal_kind = "breed"
+          updated = true
+        end
+
+        if updated
+          profession.save!
+          puts "♻️ Profession mise à jour : ##{profession.id} — #{profession.name}"
+        end
+      end
+
+      # 4.b CarrierProfession côté OGGO Data
+      carrier_prof = CarrierProfession.find_or_initialize_by(
+        carrier_referential: referential,
+        external_label_norm: norm_label
+      )
+
+      carrier_prof.external_label ||= label
+      carrier_prof.external_code  ||= raw_id.to_s.strip.presence
+      carrier_prof.species        ||= "cat"
+
+      if carrier_prof.new_record?
+        carrier_prof.save!
+        carrier_profs_created += 1
+        puts "   🐱 CarrierProfession créé : ##{carrier_prof.id} — #{carrier_prof.external_label}"
+      elsif carrier_prof.changed?
+        carrier_prof.save!
+      end
+
+      # 4.c Mapping entre les deux
+      mapping = ProfessionMapping.find_or_initialize_by(
+        profession:         profession,
+        carrier_profession: carrier_prof
+      )
+
+      if mapping.new_record?
+        mapping.status     = "approved"
+        mapping.confidence = 1.0
+        mapping.save!
+        mappings_created += 1
+      end
+    end
+
+    puts "-------------------------------------"
+    puts "🎉 Import OGGO Data chats terminé"
+    puts "   Professions créées       : #{professions_created}"
+    puts "   CarrierProfessions créés : #{carrier_profs_created}"
+    puts "   Mappings créés           : #{mappings_created}"
+  end
+end
