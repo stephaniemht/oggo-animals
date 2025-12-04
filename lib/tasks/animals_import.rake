@@ -1,9 +1,8 @@
-# lib/tasks/animals_import.rake
 require "roo"
 require "roo/excelx"
 require "digest"
 require "active_support/inflector/transliterate"
-
+require "csv"
 # -------------------------------------------------
 # Petite fonction utilitaire pour normaliser un label
 # ex: "Berger   Allemand!!" -> "berger allemand"
@@ -298,5 +297,196 @@ namespace :import do
     puts "   Total CarrierProfessions créés : #{total_created_cp}"
     puts "   Total ProfessionMappings créés : #{total_created_map}"
     puts "   Espèce appliquée (d'après le nom du fichier) : #{file_species.inspect}"
+  end
+end
+
+# =========================================================
+# 3) IMPORT SPÉCIAL OGGO DATA CHIENS (match exact)
+#
+# Utilise le fichier db/data/chiens_exact_matches_prod_app.csv
+# pour créer des CarrierProfessions dans le référentiel
+# "OGGO Data - chiens prod" (carrier OGGO Data).
+# =========================================================
+namespace :oggo do
+  desc "Importe les races chien OGGO Data (match exact) comme carrier_professions"
+  task import_dogs: :environment do
+    # 1. On récupère la compagnie OGGO Data
+    carrier = Carrier.find_by!(name: "OGGO Data")
+
+    # 2. On récupère le référentiel chiens OGGO Data
+    referential = CarrierReferential.find_by!(
+      carrier: carrier,
+      source_filename: "Races de chiens (prod OGGO)"
+    )
+
+    puts "Carrier       : #{carrier.id} - #{carrier.name}"
+    puts "Referential   : #{referential.id} - #{referential.version_label}"
+
+    # 3. Lire le CSV (214 races match exact)
+    path = Rails.root.join("db", "data", "chiens_exact_matches_prod_app.csv")
+    unless File.exist?(path)
+      puts "❌ Fichier introuvable : #{path}"
+      exit 1
+    end
+    puts "Lecture du fichier : #{path}"
+
+    created = 0
+    skipped = 0
+
+    CSV.foreach(path, headers: true) do |row|
+      name = row["nom_exact"].to_s.strip
+      next if name.blank?
+
+      norm_label = norm(name)
+
+      # On évite les doublons : même référentiel + même label_norm
+      cp = CarrierProfession.find_or_initialize_by(
+        carrier_referential: referential,
+        external_label_norm: norm_label
+      )
+
+      if cp.persisted?
+        skipped += 1
+        next
+      end
+
+      cp.external_label = name
+      cp.external_code  = nil
+      cp.species        = "dog"
+
+      cp.save!
+      created += 1
+      puts "Créé : #{cp.external_label}"
+    end
+
+    puts "-----------------------------"
+    puts "CarrierProfessions créés : #{created}"
+    puts "Déjà existants / ignorés : #{skipped}"
+  end
+end
+
+namespace :oggo do
+  desc "Importe les races chien OGGO Data (prod) comme Professions + CarrierProfessions + ProfessionMappings.
+        Utilisation : rake \"oggo:import_dogs_from_prod\""
+  task import_dogs_from_prod: :environment do
+    require "csv"
+    require "digest"
+
+    # 1. On pointe vers le CSV qu'on a préparé
+    csv_path = Rails.root.join("imports", "oggo_data_dogs.csv")
+
+    unless File.exist?(csv_path)
+      puts "❌ Fichier introuvable : #{csv_path}"
+      exit 1
+    end
+
+    puts "📂 Lecture du fichier : #{csv_path}"
+
+    # 2. On récupère / crée la compagnie OGGO Data
+    carrier = Carrier.find_or_create_by!(name: "Oggo Data")
+    puts "✅ Carrier : ##{carrier.id} — #{carrier.name}"
+
+    # 3. On crée / récupère un CarrierReferential pour ce fichier
+    file_sha = Digest::SHA256.file(csv_path).hexdigest
+
+    referential = CarrierReferential.find_or_create_by!(
+      carrier: carrier,
+      source_filename: File.basename(csv_path),
+      file_sha256: file_sha
+    ) do |ref|
+      ref.version_label = "OGGO Data chiens prod #{Time.current.strftime('%Y-%m-%d %H:%M')}"
+      ref.imported_at   = Time.current
+    end
+
+    puts "✅ CarrierReferential : ##{referential.id} — #{referential.version_label}"
+
+    professions_created     = 0
+    carrier_profs_created   = 0
+    mappings_created        = 0
+
+    # 4. On parcourt chaque ligne du CSV
+    CSV.foreach(csv_path, headers: true, col_sep: ";") do |row|
+      raw_label = row["Nom"] || row["nom"] || row["Name"] || row["name"] || row["label"] || row["Label"]
+      raw_id    = row["ID"]  || row["Id"]  || row["id"]  || row["Code"] || row["code"]
+
+      label = raw_label.to_s.strip
+      next if label.empty?
+
+      norm_label = norm(label)
+      if norm_label.blank?
+        puts "⚠️ Norm vide pour : #{label.inspect}, ligne ignorée"
+        next
+      end
+
+      # 4.a Profession dans TON référentiel
+      profession = Profession.find_by(name_norm: norm_label)
+
+      if profession.nil?
+        # aucune profession avec ce name_norm → on en crée une
+        profession = Profession.create!(
+          name:           label,
+          name_norm:      norm_label,
+          animal_species: "dog",
+          animal_kind:    "breed" # on suppose que c'est une race
+        )
+        professions_created += 1
+        puts "🆕 Profession créée : ##{profession.id} — #{profession.name}"
+      else
+        # une profession existe déjà → on la complète au besoin
+        updated = false
+
+        if profession.animal_species.blank?
+          profession.animal_species = "dog"
+          updated = true
+        end
+
+        if profession.animal_kind.blank?
+          profession.animal_kind = "breed"
+          updated = true
+        end
+
+        if updated
+          profession.save!
+          puts "♻️ Profession mise à jour : ##{profession.id} — #{profession.name}"
+        end
+      end
+
+      # 4.b CarrierProfession côté OGGO Data
+      carrier_prof = CarrierProfession.find_or_initialize_by(
+        carrier_referential: referential,
+        external_label_norm: norm_label
+      )
+
+      carrier_prof.external_label ||= label
+      carrier_prof.external_code  ||= raw_id.to_s.strip.presence
+      carrier_prof.species        ||= "dog"
+
+      if carrier_prof.new_record?
+        carrier_prof.save!
+        carrier_profs_created += 1
+        puts "   🐶 CarrierProfession créé : ##{carrier_prof.id} — #{carrier_prof.external_label}"
+      elsif carrier_prof.changed?
+        carrier_prof.save!
+      end
+
+      # 4.c Mapping entre les deux
+      mapping = ProfessionMapping.find_or_initialize_by(
+        profession:         profession,
+        carrier_profession: carrier_prof
+      )
+
+      if mapping.new_record?
+        mapping.status     = "approved"
+        mapping.confidence = 1.0
+        mapping.save!
+        mappings_created += 1
+      end
+    end
+
+    puts "-------------------------------------"
+    puts "🎉 Import OGGO Data chiens terminé"
+    puts "   Professions créées       : #{professions_created}"
+    puts "   CarrierProfessions créés : #{carrier_profs_created}"
+    puts "   Mappings créés           : #{mappings_created}"
   end
 end
