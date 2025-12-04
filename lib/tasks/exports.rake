@@ -26,7 +26,9 @@ namespace :exports do
         end
     end
 
-    # petite méthode locale pour éviter de répéter
+    # --------------------------------------------------------------------
+    # Méthode PHP détaillée (déjà existante)
+    # --------------------------------------------------------------------
     def build_php_file(path, species: nil)
       data = {}
       rel = ProfessionMapping
@@ -64,17 +66,68 @@ namespace :exports do
       end
     end
 
-    # 2) PHP global
+    # --------------------------------------------------------------------
+    # **NOUVEL export ultra simple OGGO → Profession finale**
+    #
+    # Format :
+    #   'Affenpinscher' => 'Affenpinscher'
+    #   'Basset Bleu Gascogne' => 'Basset Bleu de Gascogne'
+    #   ...
+    #
+    # --------------------------------------------------------------------
+    def build_php_oggo_simple(path, species: nil)
+      data = {}
+
+      rel = ProfessionMapping
+              .joins(carrier_profession: { carrier_referential: :carrier })
+              .includes(:profession, :carrier_profession)
+              .where(status: "approved", carriers: { name: "OGGO Data" })
+
+      rel = rel.where(professions: { animal_species: species }) if species.present?
+
+      rel.find_each do |m|
+        next unless m.profession && m.carrier_profession
+
+        oggo_label = m.carrier_profession.external_label.to_s
+        final_name = m.profession.name.to_s
+
+        data[oggo_label] = final_name
+      end
+
+      File.open(path, "w") do |f|
+        f.puts "<?php"
+        f.puts "$oggo_mapping = ["
+
+        data.sort.each do |oggo_label, final_name|
+          safe_key = oggo_label.gsub("'", "\\\\'")
+          safe_val = final_name.gsub("'", "\\\\'")
+          f.puts "  '#{safe_key}' => '#{safe_val}',"
+        end
+
+        f.puts "];"
+        f.puts "?>"
+      end
+    end
+
+    # --------------------------------------------------------------------
+    # 2) Exports PHP existants
+    # --------------------------------------------------------------------
     build_php_file(out_dir.join("mapping.php"))
-    # 3) PHP chiens
     build_php_file(out_dir.join("mapping-dog.php"), species: "dog")
-    # 4) PHP chats
     build_php_file(out_dir.join("mapping-cat.php"), species: "cat")
+
+    # --------------------------------------------------------------------
+    # 3) Nouveaux exports simples OGGO Data
+    # --------------------------------------------------------------------
+    build_php_oggo_simple(out_dir.join("mapping-oggo-dog.php"), species: "dog")
+    build_php_oggo_simple(out_dir.join("mapping-oggo-cat.php"), species: "cat")
 
     puts "Exports écrits dans: #{out_dir}"
     puts "- CSV : #{csv_path}"
     puts "- PHP : #{out_dir.join("mapping.php")}"
     puts "- PHP chiens : #{out_dir.join("mapping-dog.php")}"
     puts "- PHP chats : #{out_dir.join("mapping-cat.php")}"
+    puts "- PHP OGGO chiens : #{out_dir.join("mapping-oggo-dog.php")}"
+    puts "- PHP OGGO chats : #{out_dir.join("mapping-oggo-cat.php")}"
   end
 end
